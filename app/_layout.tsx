@@ -1,20 +1,21 @@
 // app/_layout.tsx
 import { Stack } from "expo-router";
-import { Provider as PaperProvider } from "react-native-paper";
-import { SafeAreaView, LogBox } from "react-native";
 
-LogBox.ignoreLogs([
-  "pointerEvents is deprecated",
-  '"shadow*" style props are deprecated',
-  "useNativeDriver is not supported",
-]);
-
-export default function Layout() {
+export default function RootLayout() {
   return (
-    <PaperProvider>
-      <SafeAreaView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </SafeAreaView>
-    </PaperProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* Splash & onboarding */}
+      <Stack.Screen name="splash" />
+      <Stack.Screen name="onboarding/index" />
+
+      {/* Auth */}
+      <Stack.Screen name="auth/login" />
+      <Stack.Screen name="auth/signup" />
+      <Stack.Screen name="auth/forgot-password" />
+      <Stack.Screen name="auth/otp" />
+
+      {/* Tabs */}
+      <Stack.Screen name="(tabs)" />
+    </Stack>
   );
 }

@@ -1,53 +1,66 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * QuickCommerce Compare Theme
+ * ----------------------------
+ * Centralized light/dark mode colors and font configuration
+ * Used throughout the app for consistent branding.
  */
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const gradientPrimary = ["#0871da", "#0cc6e9"];
+const accentColor = "#a855f7";
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: "#111827", // near black
+    background: "#ffffff",
+    surface: "#f5f7fa",
+    tint: gradientPrimary[0],
+    accent: accentColor,
+    tabIconDefault: "#9ca3af",
+    tabIconSelected: gradientPrimary[0],
+    border: "#e5e7eb",
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: "#f9fafb",
+    background: "#111827",
+    surface: "#1f2937",
+    tint: gradientPrimary[1],
+    accent: accentColor,
+    tabIconDefault: "#9ba1a6",
+    tabIconSelected: gradientPrimary[1],
+    border: "#374151",
   },
 };
 
+// Optional gradient colors for buttons and headers
+export const Gradients = {
+  primary: gradientPrimary,
+  accent: [accentColor, gradientPrimary[1]],
+};
+
+// Font system
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: "system-ui",
+    serif: "ui-serif",
+    rounded: "ui-rounded",
+    mono: "ui-monospace",
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  android: {
+    sans: "Roboto",
+    serif: "serif",
+    rounded: "sans-serif",
+    mono: "monospace",
   },
   web: {
     sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    rounded:
+      "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// Export theme type helper
+export type ThemeMode = "light" | "dark";

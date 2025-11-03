@@ -1,60 +1,36 @@
-// app/index.tsx
-import React, { useState } from "react";
-import { View, StyleSheet } from "react-native";
-import { TextInput, Button, Card, Text, useTheme } from "react-native-paper";
-import { useRouter } from "expo-router";
+import { useEffect } from "react";
+import { View, Text, StyleSheet, Image } from "react-native";
+import { useRouter, Href } from "expo-router";
+import { useTheme } from "@/src/context/ThemeContext";
 
-export default function HomeScreen() {
-  const [product, setProduct] = useState("");
-  const [pincode, setPincode] = useState("");
-  const router = useRouter();
-  const theme = useTheme();
+export default function Splash() {
+    const router = useRouter();
+    const theme = useTheme();
 
-  const handleCompare = () => {
-    if (!product || !pincode) return;
-    router.push({
-      pathname: "/compare",
-      params: { product, pincode },
-    });
-  };
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            router.replace("/onboarding" as Href);
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, [router]);
 
-  return (
-    <View style={styles.container}>
-      <Card style={styles.card}>
-        <Card.Title title="Quick Commerce Compare" />
-        <Card.Content>
-          <TextInput
-            label="Product Name"
-            mode="outlined"
-            value={product}
-            onChangeText={setProduct}
-            style={styles.input}
-          />
-          <TextInput
-            label="Pincode"
-            mode="outlined"
-            keyboardType="numeric"
-            value={pincode}
-            onChangeText={setPincode}
-            style={styles.input}
-          />
-          <Button
-            mode="contained"
-            onPress={handleCompare}
-            style={styles.button}
-            buttonColor={theme.colors.primary}
-          >
-            Compare Prices
-          </Button>
-        </Card.Content>
-      </Card>
-    </View>
-  );
+    return (
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            <Image
+                source={require("@/assets/images/android-icon-foreground.png")}
+                style={styles.logo}
+            />
+            <Text style={[styles.title, { color: theme.text }]}>QuickCommerce</Text>
+            <Text style={[styles.subtitle, { color: theme.text }]}>
+                Compare. Save. Repeat.
+            </Text>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
-  card: { padding: 10 },
-  input: { marginBottom: 15 },
-  button: { marginTop: 10 },
+    container: { flex: 1, justifyContent: "center", alignItems: "center" },
+    logo: { width: 100, height: 100, marginBottom: 16 },
+    title: { fontSize: 28, fontWeight: "bold" },
+    subtitle: { fontSize: 16, opacity: 0.7 },
 });
