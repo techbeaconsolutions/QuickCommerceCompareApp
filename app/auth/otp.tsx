@@ -78,7 +78,9 @@ export default function OTPScreen() {
           {otp.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => (inputs.current[index] = ref!)}
+              ref={(ref) => {
+                if (ref) inputs.current[index] = ref;
+              }}
               style={styles.otpBox}
               keyboardType="numeric"
               maxLength={1}
