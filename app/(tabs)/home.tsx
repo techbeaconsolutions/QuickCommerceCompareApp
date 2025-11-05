@@ -14,9 +14,12 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { scrapePlatform } from "../../src/api/scrape"; // ✅ API import
+import { scrapePlatform } from "../../src/api/scrape";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+
   const [product, setProduct] = useState("");
   const [pincode, setPincode] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -29,18 +32,11 @@ export default function HomeScreen() {
     { icon: "💸", title: "Comparing deals…", subtitle: "Finding the best offer" },
   ];
 
-  // 🌟 Floating sparkles
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
-
-  // ✨ Header fade-in
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideUpAnim = useRef(new Animated.Value(20)).current;
-
-  // 💡 Shimmer animation
   const shimmerAnim = useRef(new Animated.Value(0)).current;
-
-  // 💬 Loader fade animation
   const fadeLoaderAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -64,7 +60,6 @@ export default function HomeScreen() {
     float(floatAnim1, 0);
     float(floatAnim2, 800);
 
-    // Fade-in header
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -80,7 +75,6 @@ export default function HomeScreen() {
       }),
     ]).start();
 
-    // Loop shimmer every few seconds
     const shimmerLoop = () => {
       shimmerAnim.setValue(0);
       Animated.sequence([
@@ -96,20 +90,16 @@ export default function HomeScreen() {
     shimmerLoop();
   }, []);
 
-  // 🌈 Fade-in/out loading messages
   useEffect(() => {
     if (loading) {
       const interval = setInterval(() => {
-        // Fade out
         Animated.timing(fadeLoaderAnim, {
           toValue: 0,
           duration: 400,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }).start(() => {
-          // Switch text
           setStep((prev) => (prev + 1) % messages.length);
-          // Fade back in
           Animated.timing(fadeLoaderAnim, {
             toValue: 1,
             duration: 400,
@@ -117,18 +107,16 @@ export default function HomeScreen() {
             useNativeDriver: true,
           }).start();
         });
-      }, 10000);
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [loading]);
 
-  // 🧠 Extract ₹price from text
   function extractPrice(text: string): string {
     const match = text.match(/₹\s*\d+/);
     return match ? match[0] : "N/A";
   }
 
-  // 🚀 Compare handler
   const handleCompare = async () => {
     if (!product || !pincode) {
       Alert.alert("Missing Info", "Please enter both product and pincode.");
@@ -165,11 +153,8 @@ export default function HomeScreen() {
         })),
       ];
 
-      // Sort platforms: Blinkit → Zepto → Swiggy → Flipkart
-      const platformOrder = ["Blinkit", "Zepto", "Swiggy", "Flipkart"];
-      combined.sort(
-        (a, b) => platformOrder.indexOf(a.platform) - platformOrder.indexOf(b.platform)
-      );
+      const order = ["Blinkit", "Zepto", "Swiggy", "Flipkart"];
+      combined.sort((a, b) => order.indexOf(a.platform) - order.indexOf(b.platform));
 
       setResults(combined);
     } catch (err: any) {
@@ -190,14 +175,10 @@ export default function HomeScreen() {
     { name: "Bakery", icon: "🍞" },
     { name: "Fruits", icon: "🍎" },
     { name: "Vegetables", icon: "🥦" },
-    { name: "Grains", icon: "🧁" },
-    { name: "Beverages", icon: "🥤" },
-    { name: "Care", icon: "🧴" },
-    { name: "Snacks", icon: "🍪" },
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f9fcff" }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 🌟 Floating sparkles */}
       <Animated.View
         style={[
@@ -205,7 +186,7 @@ export default function HomeScreen() {
           { top: 80, left: 40, transform: [{ translateY: floatAnim1 }] },
         ]}
       >
-        <Ionicons name="sparkles" size={32} color="#0871da" style={{ opacity: 0.2 }} />
+        <Ionicons name="sparkles" size={32} color={colors.primary} style={{ opacity: 0.2 }} />
       </Animated.View>
 
       <Animated.View
@@ -217,18 +198,17 @@ export default function HomeScreen() {
         <Ionicons
           name="sparkles-outline"
           size={36}
-          color="#0cc6e9"
+          color={colors.primary}
           style={{ opacity: 0.25 }}
         />
       </Animated.View>
 
-      {/* Main Scroll Content */}
-<ScrollView
-  style={styles.container}
-  contentContainerStyle={{ paddingBottom: 100 }} // ⬅️ space for bottom tab
-  showsVerticalScrollIndicator={false}
->
-        {/* ✨ Animated Header */}
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ✨ Header */}
         <Animated.View
           style={[
             styles.header,
@@ -238,50 +218,50 @@ export default function HomeScreen() {
             },
           ]}
         >
-          <Text style={styles.heading}>
-            Compare <Text style={styles.gradientText}>Prices.</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>
+            Compare <Text style={{ color: colors.primary }}>Prices.</Text>
           </Text>
-          <Text style={styles.subheading}>Save Smart.</Text>
-          <Text style={styles.desc}>
+          <Text style={[styles.subheading, { color: colors.primary }]}>Save Smart.</Text>
+          <Text style={[styles.desc, { color: colors.secondaryText }]}>
             Real-time price comparison across all major platforms
           </Text>
         </Animated.View>
 
         {/* Search Card */}
-        <View style={styles.card}>
-          <View style={styles.inputContainer}>
-            <Ionicons name="search" size={20} color="#999" style={styles.icon} />
+        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.border }]}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
             <TextInput
               placeholder="Search for product"
+              placeholderTextColor={colors.secondaryText}
               value={product}
               onChangeText={setProduct}
-              style={styles.input}
+              style={[styles.input, { color: colors.text }]}
             />
           </View>
-          <View style={styles.inputContainer}>
-            <Ionicons name="location" size={20} color="#999" style={styles.icon} />
+          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Ionicons name="location" size={20} color={colors.secondaryText} style={styles.icon} />
             <TextInput
               placeholder="Pincode"
               keyboardType="numeric"
+              placeholderTextColor={colors.secondaryText}
               value={pincode}
               onChangeText={setPincode}
-              style={styles.input}
+              style={[styles.input, { color: colors.text }]}
             />
           </View>
 
-          {/* ✨ Shimmering Compare Button */}
+          {/* Compare Button */}
           <TouchableOpacity onPress={handleCompare} activeOpacity={0.8}>
             <View style={styles.buttonWrapper}>
               <LinearGradient
-                colors={["#0871da", "#0cc6e9"]}
+                colors={[colors.primary, "#0cc6e9"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.button}
               >
                 <Text style={styles.buttonText}>Compare</Text>
               </LinearGradient>
-
-              {/* Shimmer Overlay */}
               <Animated.View
                 style={[
                   styles.shimmerOverlay,
@@ -289,7 +269,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <LinearGradient
-                  colors={["transparent", "rgba(255,255,255,0.4)", "transparent"]}
+                  colors={["transparent", "rgba(255,255,255,0.3)", "transparent"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.shimmerGradient}
@@ -300,18 +280,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Categories */}
-        <Text style={styles.sectionTitle}>Popular Categories</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Categories</Text>
         <View style={styles.grid}>
           {categories.map((cat, i) => (
-            <View key={i} style={styles.catCard}>
+            <View key={i} style={[styles.catCard, { backgroundColor: colors.card, shadowColor: colors.border }]}>
               <Text style={styles.catIcon}>{cat.icon}</Text>
-              <Text style={styles.catName}>{cat.name}</Text>
+              <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
             </View>
           ))}
         </View>
 
-        {/* 📊 Results Section */}
-        <Text style={styles.sectionTitle}>Results</Text>
+        {/* Results */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
 
         {loading && (
           <View style={{ alignItems: "center", marginVertical: 30 }}>
@@ -320,7 +300,7 @@ export default function HomeScreen() {
                 opacity: fadeLoaderAnim,
                 fontSize: 18,
                 fontWeight: "700",
-                color: "#0871da",
+                color: colors.primary,
               }}
             >
               {messages[step].icon} {messages[step].title}
@@ -329,7 +309,7 @@ export default function HomeScreen() {
               style={{
                 opacity: fadeLoaderAnim,
                 fontSize: 14,
-                color: "#555",
+                color: colors.secondaryText,
                 marginTop: 6,
               }}
             >
@@ -339,7 +319,7 @@ export default function HomeScreen() {
         )}
 
         {!loading && results.length === 0 && (
-          <Text style={{ textAlign: "center", color: "#777", marginVertical: 20 }}>
+          <Text style={{ textAlign: "center", color: colors.secondaryText, marginVertical: 20 }}>
             No results found. Try searching a product.
           </Text>
         )}
@@ -352,20 +332,18 @@ export default function HomeScreen() {
             columnWrapperStyle={{ justifyContent: "space-between" }}
             scrollEnabled={false}
             renderItem={({ item }) => (
-              <View style={[styles.cardBox, { borderColor: "#ddd" }]}>
+              <View style={[styles.cardBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Image
                   source={{
-                    uri:
-                      item.image ||
-                      "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
+                    uri: item.image || "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
                   }}
                   style={styles.cardImage}
                 />
-                <Text numberOfLines={2} style={styles.cardTitle}>
+                <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
                   {item.title || item.name}
                 </Text>
-                <Text style={styles.cardPrice}>{item.price}</Text>
-                <Text style={{ fontSize: 13, color: "#555", marginTop: 4 }}>
+                <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.price}</Text>
+                <Text style={{ fontSize: 13, color: colors.secondaryText, marginTop: 4 }}>
                   {item.platform}
                 </Text>
               </View>
@@ -381,21 +359,13 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   sparkle: { position: "absolute", zIndex: 0 },
   header: { alignItems: "center", marginTop: 5, marginBottom: 10 },
-  heading: { fontSize: 28, fontWeight: "800", color: "#111" },
-  gradientText: { color: "#0871da" },
-  subheading: { fontSize: 28, fontWeight: "800", color: "#6C63FF" },
-  desc: {
-    fontSize: 14,
-    textAlign: "center",
-    color: "#555",
-    marginTop: 6,
-    lineHeight: 20,
-  },
+  heading: { fontSize: 28, fontWeight: "800" },
+  subheading: { fontSize: 28, fontWeight: "800" },
+  desc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
   card: {
-    backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 16,
-    shadowColor: "#000",
+    marginTop: -2,
+    padding: 10,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 3,
@@ -404,79 +374,43 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "#ddd",
     borderWidth: 1,
     borderRadius: 12,
     marginBottom: 10,
     paddingHorizontal: 10,
-    backgroundColor: "#f8f9fb",
   },
   icon: { marginRight: 8 },
   input: { flex: 1, height: 45, fontSize: 15 },
   buttonWrapper: { position: "relative", overflow: "hidden", borderRadius: 50 },
-  button: {
-    borderRadius: 50,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
+  button: { borderRadius: 50, paddingVertical: 14, alignItems: "center" },
   shimmerOverlay: { ...StyleSheet.absoluteFillObject },
   shimmerGradient: { width: 100, height: "100%" },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginVertical: 14,
-    marginLeft: 4,
-    color: "#111",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginVertical: 14, marginLeft: 4 },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   catCard: {
     width: "22%",
-    backgroundColor: "#fff",
     borderRadius: 16,
     paddingVertical: 10,
     alignItems: "center",
     marginBottom: 5,
-    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
   catIcon: { fontSize: 18 },
-  catName: { marginTop: 6, fontSize: 11, color: "#333" },
+  catName: { marginTop: 6, fontSize: 11 },
   cardBox: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     borderWidth: 1.2,
-    borderColor: "#ddd",
     width: "48%",
     marginBottom: 10,
     padding: 10,
-    shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 5,
     elevation: 3,
   },
-  cardImage: {
-    width: "100%",
-    height: 100,
-    borderRadius: 10,
-    resizeMode: "contain",
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#222",
-    marginTop: 8,
-  },
-  cardPrice: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0871da",
-    marginTop: 4,
-  },
+  cardImage: { width: "100%", height: 100, borderRadius: 10, resizeMode: "contain" },
+  cardTitle: { fontSize: 14, fontWeight: "600", marginTop: 8 },
+  cardPrice: { fontSize: 16, fontWeight: "700", marginTop: 4 },
 });

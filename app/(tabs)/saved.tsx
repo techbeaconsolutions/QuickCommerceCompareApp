@@ -9,9 +9,10 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../../context/ThemeContext"; // ✅ import global theme
 
 export default function SavedScreen() {
+  const { colors } = useTheme(); // 🎨 access theme colors
   const [savedItems, setSavedItems] = useState([
     {
       id: "1",
@@ -51,18 +52,22 @@ export default function SavedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <Text style={styles.heading}>
-        Saved <Text style={styles.gradientText}>Products</Text>
+      <Text style={[styles.heading, { color: colors.text }]}>
+        Saved <Text style={{ color: colors.primary }}>Products</Text>
       </Text>
-      <Text style={styles.subtext}>Your favorite and recently viewed items</Text>
+      <Text style={[styles.subtext, { color: colors.secondaryText }]}>
+        Your favorite and recently viewed items
+      </Text>
 
       {/* List */}
       {savedItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="heart-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>No saved products yet</Text>
+          <Ionicons name="heart-outline" size={64} color={colors.secondaryText} />
+          <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+            No saved products yet
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -70,12 +75,25 @@ export default function SavedScreen() {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                  shadowColor: colors.border,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
               <Image source={{ uri: item.image }} style={styles.image} />
               <View style={styles.info}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.price}>{item.price}</Text>
-                <Text style={styles.platform}>{item.platform}</Text>
+                <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+                <Text style={[styles.price, { color: colors.primary }]}>
+                  {item.price}
+                </Text>
+                <Text style={[styles.platform, { color: colors.secondaryText }]}>
+                  {item.platform}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => removeItem(item.id)}>
                 <Ionicons name="trash-outline" size={22} color="#ff4c4c" />
@@ -91,35 +109,28 @@ export default function SavedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fcff",
     padding: 16,
   },
   heading: {
     fontSize: 26,
     fontWeight: "800",
-    color: "#111",
     textAlign: "center",
-  },
-  gradientText: {
-    color: "#0871da",
   },
   subtext: {
     textAlign: "center",
     fontSize: 14,
-    color: "#666",
     marginBottom: 20,
   },
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 12,
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
   },
   image: {
     width: 70,
@@ -133,17 +144,14 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#222",
   },
   price: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0871da",
     marginTop: 4,
   },
   platform: {
     fontSize: 13,
-    color: "#666",
     marginTop: 4,
   },
   emptyContainer: {
@@ -153,7 +161,6 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   emptyText: {
-    color: "#777",
     fontSize: 16,
     marginTop: 10,
   },
