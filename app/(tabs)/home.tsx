@@ -183,7 +183,7 @@ export default function HomeScreen() {
       <Animated.View
         style={[
           styles.sparkle,
-          { top: 80, left: 40, transform: [{ translateY: floatAnim1 }] },
+          { top: 60, left: 40, transform: [{ translateY: floatAnim1 }] },
         ]}
       >
         <Ionicons name="sparkles" size={32} color={colors.primary} style={{ opacity: 0.2 }} />
@@ -192,7 +192,7 @@ export default function HomeScreen() {
       <Animated.View
         style={[
           styles.sparkle,
-          { top: 140, right: 60, transform: [{ translateY: floatAnim2 }] },
+          { top: 120, right: 60, transform: [{ translateY: floatAnim2 }] },
         ]}
       >
         <Ionicons
@@ -358,7 +358,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   sparkle: { position: "absolute", zIndex: 0 },
-  header: { alignItems: "center", marginTop: 5, marginBottom: 10 },
+  header: { alignItems: "center", marginTop: 10, marginBottom: 5 },
   heading: { fontSize: 28, fontWeight: "800" },
   subheading: { fontSize: 28, fontWeight: "800" },
   desc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   shimmerOverlay: { ...StyleSheet.absoluteFillObject },
   shimmerGradient: { width: 100, height: "100%" },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", marginVertical: 14, marginLeft: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginVertical: 0, marginLeft: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   catCard: {
     width: "22%",

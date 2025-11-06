@@ -64,7 +64,7 @@ function ThemedTabs() {
               borderRadius: 10,
               position: "absolute",
               marginHorizontal: 0,
-              marginBottom: -10,
+              marginBottom: -20,
               paddingBottom: insets.bottom, // 👈 ensure it stays above navbar
               paddingTop: 10,
             },
@@ -84,7 +84,7 @@ function ThemedTabs() {
           />
 
           {/* 🔁 COMPARE */}
-          <Tabs.Screen
+          {/* <Tabs.Screen
             name="compare"
             options={{
               title: "Compare",
@@ -96,7 +96,7 @@ function ThemedTabs() {
                 />
               ),
             }}
-          />
+          /> */}
 
           {/* ❤️ SAVED */}
           <Tabs.Screen

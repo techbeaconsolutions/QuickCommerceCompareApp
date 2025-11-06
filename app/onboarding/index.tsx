@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
     borderRadius: 30,
-    marginBottom:10,
+    marginBottom:20,
   },
   nextText: {
     fontWeight: "700",
