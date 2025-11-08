@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,53 +7,125 @@ import {
   Image,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../../context/ThemeContext"; // ✅ import global theme
+import { useTheme } from "../../context/ThemeContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { scrapePlatform } from "../../src/api/scrape"; // ✅ Make sure this path is correct
 
 export default function SavedScreen() {
-  const { colors } = useTheme(); // 🎨 access theme colors
-  const [savedItems, setSavedItems] = useState([
-    {
-      id: "1",
-      name: "Amul Butter 500g",
-      price: "₹285",
-      platform: "Blinkit",
-      image:
-        "https://rukminim2.flixcart.com/image/416/416/xif0q/butter/n/t/j/-original-imagz8xhybfxfyyx.jpeg?q=70",
-    },
-    {
-      id: "2",
-      name: "Tata Tea Gold 1kg",
-      price: "₹540",
-      platform: "Zepto",
-      image:
-        "https://cdn.zeptonow.com/production///tr:w-400,ar-1050-1050,pr-true,f-auto,q-80/cms/product_variant/9a7e32a3-10a2-4e3b-87ef-00e5ee77e207.jpeg",
-    },
-    {
-      id: "3",
-      name: "Dabur Honey 500g",
-      price: "₹230",
-      platform: "Flipkart",
-      image:
-        "https://rukminim2.flixcart.com/image/416/416/k7dnonk0/honey/e/5/j/500-honey-squeezy-pack-dabur-original-imafp2hqfxzzfxmn.jpeg?q=70",
-    },
-  ]);
+  const { colors } = useTheme();
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const removeItem = (id: string) => {
+  // 🎨 Brand colors
+  const platformColors: Record<string, string> = {
+    Blinkit: "#FFD84D",
+    Zepto: "#9C1AFF",
+    Swiggy: "#FC8019",
+    Flipkart: "#2874F0",
+  };
+
+  // 🧠 Load saved items
+  const loadSavedItems = async () => {
+    try {
+      const stored = await AsyncStorage.getItem("savedProducts");
+      setSavedItems(stored ? JSON.parse(stored) : []);
+    } catch (error) {
+      console.error("Error loading saved items:", error);
+    }
+  };
+
+  // 🔄 Reload when tab focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSavedItems();
+    }, [])
+  );
+
+  // 🗑️ Remove item
+  const removeItem = async (id: string) => {
     Alert.alert("Remove Item", "Are you sure you want to remove this item?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
         style: "destructive",
-        onPress: () => setSavedItems(savedItems.filter((i) => i.id !== id)),
+        onPress: async () => {
+          const updated = savedItems.filter((i) => i.id !== id);
+          setSavedItems(updated);
+          await AsyncStorage.setItem("savedProducts", JSON.stringify(updated));
+        },
       },
     ]);
   };
 
+  // 💸 Re-Compare prices
+const handleReCompare = async (item: any) => {
+  if (!item.title && !item.name) return;
+
+  try {
+    setLoadingId(item.id);
+
+    const productName = item.title || item.name;
+    const pincode = item.pincode || "411014"; // ✅ use saved pincode or fallback
+
+    const response = await scrapePlatform("all", pincode, productName);
+    const data = response?.data || {};
+
+    const extractPrice = (text: string): string => {
+      const match = text.match(/₹\s*\d+/);
+      return match ? match[0] : "N/A";
+    };
+
+    const combined = [
+      ...(data.blinkit || []).map((i: any) => ({
+        ...i,
+        price: extractPrice(i.price),
+        platform: "Blinkit",
+      })),
+      ...(data.zepto || []).map((i: any) => ({
+        ...i,
+        price: extractPrice(i.price),
+        platform: "Zepto",
+      })),
+      ...(data.swiggy || []).map((i: any) => ({
+        ...i,
+        price: extractPrice(i.price),
+        platform: "Swiggy",
+      })),
+      ...(data.flipkart || []).map((i: any) => ({
+        ...i,
+        price: extractPrice(i.price),
+        platform: "Flipkart",
+      })),
+    ];
+
+    const updatedProduct = combined[0] || item;
+
+    const updatedList = savedItems.map((p) =>
+      p.id === item.id ? { ...p, ...updatedProduct } : p
+    );
+
+    setSavedItems(updatedList);
+    await AsyncStorage.setItem("savedProducts", JSON.stringify(updatedList));
+
+    Alert.alert(
+      "✅ Updated",
+      `${productName} refreshed for pincode ${pincode}.`
+    );
+  } catch (error) {
+    console.error("Re-compare failed:", error);
+    Alert.alert("Error", "Failed to fetch updated prices. Try again.");
+  } finally {
+    setLoadingId(null);
+  }
+};
+
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
       <Text style={[styles.heading, { color: colors.text }]}>
         Saved <Text style={{ color: colors.primary }}>Products</Text>
       </Text>
@@ -61,7 +133,6 @@ export default function SavedScreen() {
         Your favorite and recently viewed items
       </Text>
 
-      {/* List */}
       {savedItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="heart-outline" size={64} color={colors.secondaryText} />
@@ -72,7 +143,7 @@ export default function SavedScreen() {
       ) : (
         <FlatList
           data={savedItems}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || index.toString()}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <View
@@ -85,16 +156,56 @@ export default function SavedScreen() {
                 },
               ]}
             >
-              <Image source={{ uri: item.image }} style={styles.image} />
+              <Image
+                source={{
+                  uri:
+                    item.image ||
+                    "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
+                }}
+                style={styles.image}
+              />
               <View style={styles.info}>
-                <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+                <Text numberOfLines={2} style={[styles.name, { color: colors.text }]}>
+                  {item.title || item.name}
+                </Text>
                 <Text style={[styles.price, { color: colors.primary }]}>
                   {item.price}
                 </Text>
-                <Text style={[styles.platform, { color: colors.secondaryText }]}>
-                  {item.platform}
-                </Text>
+
+                {/* 🟨 Platform Badge */}
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: platformColors[item.platform] || "#ccc" },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{item.platform}</Text>
+                </View>
+
+<Text style={[{ fontSize: 12, color: colors.secondaryText, marginTop: 3 }]}>
+  📍 {item.pincode}
+</Text>
+
+                {/* 🔄 Re-Compare button */}
+                <TouchableOpacity
+                  style={[
+                    styles.recompareBtn,
+                    { borderColor: colors.primary },
+                  ]}
+                  onPress={() => handleReCompare(item)}
+                  disabled={loadingId === item.id}
+                >
+                  {loadingId === item.id ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text style={[styles.recompareText, { color: colors.primary }]}>
+                      Re-Compare
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
+
+              {/* 🗑️ Delete */}
               <TouchableOpacity onPress={() => removeItem(item.id)}>
                 <Ionicons name="trash-outline" size={22} color="#ff4c4c" />
               </TouchableOpacity>
@@ -107,14 +218,12 @@ export default function SavedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
+  container: { flex: 1, padding: 16 },
   heading: {
     fontSize: 26,
     fontWeight: "800",
     textAlign: "center",
+    marginTop: 30,
   },
   subtext: {
     textAlign: "center",
@@ -132,36 +241,32 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
   },
-  image: {
-    width: 70,
-    height: 70,
-    borderRadius: 12,
+  image: { width: 70, height: 70, borderRadius: 12 },
+  info: { flex: 1, marginLeft: 12 },
+  name: { fontSize: 16, fontWeight: "600" },
+  price: { fontSize: 18, fontWeight: "700", marginTop: 4 },
+  badge: {
+    alignSelf: "flex-start",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginTop: 6,
   },
-  info: {
-    flex: 1,
-    marginLeft: 12,
+  badgeText: { fontSize: 12, fontWeight: "700", color: "#fff" },
+  recompareBtn: {
+    marginTop: 8,
+    borderWidth: 1.2,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    alignSelf: "flex-start",
   },
-  name: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  platform: {
-    fontSize: 13,
-    marginTop: 4,
-  },
+  recompareText: { fontSize: 12, fontWeight: "600" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 50,
   },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 10,
-  },
+  emptyText: { fontSize: 16, marginTop: 10 },
 });

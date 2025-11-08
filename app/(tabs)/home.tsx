@@ -16,6 +16,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { scrapePlatform } from "../../src/api/scrape";
 import { useTheme } from "../../context/ThemeContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -25,6 +27,8 @@ export default function HomeScreen() {
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const heartScale = useRef(new Animated.Value(1)).current;
 
   const messages = [
     { icon: "🛒", title: "Scraping data…", subtitle: "Connecting to sources" },
@@ -32,12 +36,136 @@ export default function HomeScreen() {
     { icon: "💸", title: "Comparing deals…", subtitle: "Finding the best offer" },
   ];
 
+  const ProductCard = ({ item, colors, saveProduct, isItemSaved, platformColors }: any) => {
+    const heartScale = useRef(new Animated.Value(1)).current;
+
+    const animateHeart = () => {
+      Animated.sequence([
+        Animated.timing(heartScale, {
+          toValue: 1.3,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heartScale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
+    const handleSavePress = () => {
+      animateHeart();
+      saveProduct(item);
+    };
+
+    return (
+      <View
+        style={[
+          styles.cardBox,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
+        <Image
+          source={{
+            uri:
+              item.image ||
+              "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
+          }}
+          style={styles.cardImage}
+        />
+        <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
+          {item.title || item.name}
+        </Text>
+        <Text style={[styles.cardPrice, { color: colors.primary }]}>
+          {item.price}
+        </Text>
+
+        {/* Platform badge */}
+        <View
+          style={{
+            alignSelf: "flex-start",
+            backgroundColor: platformColors[item.platform] || "#ccc",
+            borderRadius: 20,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            marginTop: 8,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
+            {item.platform}
+          </Text>
+        </View>
+
+        {/* ❤️ Heart button */}
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            backgroundColor: "#fff",
+            borderRadius: 50,
+            padding: 6,
+            elevation: 2,
+          }}
+          onPress={handleSavePress}
+          activeOpacity={0.8}
+        >
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Ionicons
+              name={isItemSaved(item) ? "heart" : "heart-outline"}
+              size={20}
+              color={isItemSaved(item) ? "#FF4C4C" : colors.primary}
+            />
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const saveProduct = async (item: any) => {
+    animateHeart();
+    try {
+      const stored = await AsyncStorage.getItem("savedProducts");
+      const saved = stored ? JSON.parse(stored) : [];
+
+      const alreadySaved = saved.some((p: any) => p.title === item.title);
+
+      let updated;
+      if (alreadySaved) {
+        // 🔴 Remove product if already saved
+        updated = saved.filter((p: any) => p.title !== item.title);
+        Alert.alert("Removed", "Product removed from your saved list.");
+      } else {
+        // ❤️ Save new product with pincode and ID
+        const productWithPincode = {
+          ...item,
+          id: Date.now().toString(),
+          pincode,
+        };
+        updated = [...saved, productWithPincode];
+        Alert.alert("Saved!", "Product added to your saved list.");
+      }
+
+      await AsyncStorage.setItem("savedProducts", JSON.stringify(updated));
+      setSavedItems(updated); // update UI immediately
+    } catch (error) {
+      console.error("Error saving/removing product:", error);
+    }
+  };
+
+
+
   const floatAnim1 = useRef(new Animated.Value(0)).current;
   const floatAnim2 = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideUpAnim = useRef(new Animated.Value(20)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const fadeLoaderAnim = useRef(new Animated.Value(1)).current;
+
+  const isItemSaved = (item: any) => {
+    return savedItems.some((p) => p.title === item.title);
+  };
 
   useEffect(() => {
     const float = (anim: Animated.Value, delay: number) => {
@@ -89,6 +217,31 @@ export default function HomeScreen() {
     };
     shimmerLoop();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadSaved = async () => {
+        const stored = await AsyncStorage.getItem("savedProducts");
+        setSavedItems(stored ? JSON.parse(stored) : []);
+      };
+      loadSaved();
+    }, [])
+  );
+
+  const animateHeart = () => {
+    Animated.sequence([
+      Animated.timing(heartScale, {
+        toValue: 1.4,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(heartScale, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   useEffect(() => {
     if (loading) {
@@ -177,6 +330,14 @@ export default function HomeScreen() {
     { name: "Vegetables", icon: "🥦" },
   ];
 
+  // 🎨 Platform brand colors
+  const platformColors: Record<string, string> = {
+    Blinkit: "#FFD84D",
+    Zepto: "#9C1AFF",
+    Swiggy: "#FC8019",
+    Flipkart: "#2874F0",
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 🌟 Floating sparkles */}
@@ -227,7 +388,7 @@ export default function HomeScreen() {
           </Text>
         </Animated.View>
 
-        {/* Search Card */}
+        {/* 🔍 Search Card */}
         <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.border }]}>
           <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
@@ -279,7 +440,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Categories */}
+        {/* 🛍️ Categories */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Categories</Text>
         <View style={styles.grid}>
           {categories.map((cat, i) => (
@@ -290,7 +451,7 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Results */}
+        {/* 📊 Results */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
 
         {loading && (
@@ -319,7 +480,7 @@ export default function HomeScreen() {
         )}
 
         {!loading && results.length === 0 && (
-          <Text style={{ textAlign: "center", color: colors.secondaryText, marginVertical: 20 }}>
+          <Text style={{ textAlign: "center", color: colors.secondaryText, marginVertical: 100 }}>
             No results found. Try searching a product.
           </Text>
         )}
@@ -332,23 +493,18 @@ export default function HomeScreen() {
             columnWrapperStyle={{ justifyContent: "space-between" }}
             scrollEnabled={false}
             renderItem={({ item }) => (
-              <View style={[styles.cardBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Image
-                  source={{
-                    uri: item.image || "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
-                  }}
-                  style={styles.cardImage}
-                />
-                <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
-                  {item.title || item.name}
-                </Text>
-                <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.price}</Text>
-                <Text style={{ fontSize: 13, color: colors.secondaryText, marginTop: 4 }}>
-                  {item.platform}
-                </Text>
-              </View>
+              <ProductCard
+                item={item}
+                colors={colors}
+                saveProduct={saveProduct}
+                isItemSaved={isItemSaved}
+                platformColors={platformColors}
+              />
             )}
           />
+
+
+
         )}
       </ScrollView>
     </View>
@@ -358,7 +514,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   sparkle: { position: "absolute", zIndex: 0 },
-  header: { alignItems: "center", marginTop: 10, marginBottom: 5 },
+  header: { alignItems: "center", marginTop: 20, marginBottom: 5 },
   heading: { fontSize: 28, fontWeight: "800" },
   subheading: { fontSize: 28, fontWeight: "800" },
   desc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
@@ -386,7 +542,7 @@ const styles = StyleSheet.create({
   shimmerOverlay: { ...StyleSheet.absoluteFillObject },
   shimmerGradient: { width: 100, height: "100%" },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", marginVertical: 0, marginLeft: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginVertical: 5, marginLeft: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   catCard: {
     width: "22%",

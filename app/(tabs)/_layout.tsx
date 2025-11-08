@@ -64,7 +64,7 @@ function ThemedTabs() {
               borderRadius: 10,
               position: "absolute",
               marginHorizontal: 0,
-              marginBottom: -20,
+              marginBottom: -70,
               paddingBottom: insets.bottom, // 👈 ensure it stays above navbar
               paddingTop: 10,
             },
