@@ -475,15 +475,15 @@ export default function HomeScreen() {
       </ScrollView>
 
       {locationModalVisible && (
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+        <View style={styles.popupBackdrop}>
+          <View style={[styles.popupContainer, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Set Location</Text>
 
             <TouchableOpacity
-              style={styles.modalOption}
+              style={[styles.modalOption, { marginTop: 10 }]}
               onPress={async () => {
                 await getCurrentLocation(true);
-                  setIsManualLocation(false); // ✅ auto-detect → false
+                setIsManualLocation(false);
                 setLocationModalVisible(false);
               }}
             >
@@ -491,11 +491,16 @@ export default function HomeScreen() {
               <Text style={{ color: colors.text, fontSize: 15 }}>Detect Automatically</Text>
             </TouchableOpacity>
 
-            <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <View
+              style={[
+                styles.inputContainer,
+                { borderColor: colors.border, backgroundColor: colors.background, marginTop: 12 },
+              ]}
+            >
               <Ionicons name="pin" size={18} color={colors.secondaryText} style={styles.icon} />
               <TextInput
                 placeholder="Enter Pincode manually"
-                placeholderTextColor={colors.text} // 👈 Add this
+                placeholderTextColor={colors.secondaryText}
                 keyboardType="numeric"
                 value={manualPincode}
                 onChangeText={setManualPincode}
@@ -517,6 +522,7 @@ export default function HomeScreen() {
                 const newLoc = { city: "Manual Entry", area: "Custom Area", pincode: manualPincode };
                 setLocationInfo(newLoc);
                 setPincode(manualPincode);
+                setIsManualLocation(true);
                 await AsyncStorage.setItem("locationInfo", JSON.stringify(newLoc));
                 setLocationModalVisible(false);
                 Toast.show({
@@ -532,7 +538,7 @@ export default function HomeScreen() {
                 colors={[colors.primary, "#0cc6e9"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[styles.button, { marginTop: 10 }]}
+                style={[styles.button, { marginTop: 14 }]}
               >
                 <Text style={styles.buttonText}>Save Location</Text>
               </LinearGradient>
@@ -540,13 +546,14 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               onPress={() => setLocationModalVisible(false)}
-              style={{ marginTop: 10 }}
+              style={{ marginTop: 12 }}
             >
               <Text style={{ color: colors.secondaryText, textAlign: "center" }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
+
 
     </View>
   );
@@ -612,7 +619,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    bottom: 25,
+    bottom: 40,
     backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "flex-end",
   },
@@ -639,6 +646,29 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     marginBottom: 10,
+  },
+  popupBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+
+  popupContainer: {
+    width: "85%",
+    borderRadius: 20,
+    padding: 20,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    alignItems: "stretch",
   },
 
 });
