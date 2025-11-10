@@ -10,7 +10,7 @@ import {
   Easing,
   Image,
   FlatList,
-  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,17 +18,31 @@ import { scrapePlatform } from "../../src/api/scrape";
 import { useTheme } from "../../context/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import Toast from "react-native-toast-message";
+import * as Location from "expo-location";
+
+/** Product Type */
+type Product = {
+  id?: string;
+  title: string;
+  platform: string;
+  price?: string;
+  image?: string;
+  pincode?: string;
+};
 
 export default function HomeScreen() {
   const { colors } = useTheme();
 
   const [product, setProduct] = useState("");
   const [pincode, setPincode] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [locationInfo, setLocationInfo] = useState<{ city?: string; area?: string; pincode?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [step, setStep] = useState(0);
-  const [savedItems, setSavedItems] = useState<any[]>([]);
-  const heartScale = useRef(new Animated.Value(1)).current;
+  const [results, setResults] = useState<Product[]>([]);
+  const [savedItems, setSavedItems] = useState<Product[]>([]);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   const messages = [
     { icon: "🛒", title: "Scraping data…", subtitle: "Connecting to sources" },
@@ -36,188 +50,22 @@ export default function HomeScreen() {
     { icon: "💸", title: "Comparing deals…", subtitle: "Finding the best offer" },
   ];
 
-  const ProductCard = ({ item, colors, saveProduct, isItemSaved, platformColors }: any) => {
-    const heartScale = useRef(new Animated.Value(1)).current;
-
-    const animateHeart = () => {
-      Animated.sequence([
-        Animated.timing(heartScale, {
-          toValue: 1.3,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(heartScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
-
-    const handleSavePress = () => {
-      animateHeart();
-      saveProduct(item);
-    };
-
-    return (
-      <View
-        style={[
-          styles.cardBox,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
-        <Image
-          source={{
-            uri:
-              item.image ||
-              "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
-          }}
-          style={styles.cardImage}
-        />
-        <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
-          {item.title || item.name}
-        </Text>
-        <Text style={[styles.cardPrice, { color: colors.primary }]}>
-          {item.price}
-        </Text>
-
-        {/* Platform badge */}
-        <View
-          style={{
-            alignSelf: "flex-start",
-            backgroundColor: platformColors[item.platform] || "#ccc",
-            borderRadius: 20,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            marginTop: 8,
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
-            {item.platform}
-          </Text>
-        </View>
-
-        {/* ❤️ Heart button */}
-        <TouchableOpacity
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            backgroundColor: "#fff",
-            borderRadius: 50,
-            padding: 6,
-            elevation: 2,
-          }}
-          onPress={handleSavePress}
-          activeOpacity={0.8}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <Ionicons
-              name={isItemSaved(item) ? "heart" : "heart-outline"}
-              size={20}
-              color={isItemSaved(item) ? "#FF4C4C" : colors.primary}
-            />
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const saveProduct = async (item: any) => {
-    animateHeart();
-    try {
-      const stored = await AsyncStorage.getItem("savedProducts");
-      const saved = stored ? JSON.parse(stored) : [];
-
-      const alreadySaved = saved.some((p: any) => p.title === item.title);
-
-      let updated;
-      if (alreadySaved) {
-        // 🔴 Remove product if already saved
-        updated = saved.filter((p: any) => p.title !== item.title);
-        Alert.alert("Removed", "Product removed from your saved list.");
-      } else {
-        // ❤️ Save new product with pincode and ID
-        const productWithPincode = {
-          ...item,
-          id: Date.now().toString(),
-          pincode,
-        };
-        updated = [...saved, productWithPincode];
-        Alert.alert("Saved!", "Product added to your saved list.");
-      }
-
-      await AsyncStorage.setItem("savedProducts", JSON.stringify(updated));
-      setSavedItems(updated); // update UI immediately
-    } catch (error) {
-      console.error("Error saving/removing product:", error);
-    }
-  };
-
-
-
-  const floatAnim1 = useRef(new Animated.Value(0)).current;
-  const floatAnim2 = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideUpAnim = useRef(new Animated.Value(20)).current;
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const fadeLoaderAnim = useRef(new Animated.Value(1)).current;
-
-  const isItemSaved = (item: any) => {
-    return savedItems.some((p) => p.title === item.title);
-  };
-
+  /** Load cached or detect new location */
   useEffect(() => {
-    const float = (anim: Animated.Value, delay: number) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: -10,
-            duration: 2000,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+    const loadCached = async () => {
+      const cached = await AsyncStorage.getItem("locationInfo");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setLocationInfo(parsed);
+        setPincode(parsed.pincode);
+      } else {
+        await getCurrentLocation(true);
+      }
     };
-    float(floatAnim1, 0);
-    float(floatAnim2, 800);
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        delay: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideUpAnim, {
-        toValue: 0,
-        duration: 1000,
-        delay: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    const shimmerLoop = () => {
-      shimmerAnim.setValue(0);
-      Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.delay(4000),
-      ]).start(() => shimmerLoop());
-    };
-    shimmerLoop();
+    loadCached();
   }, []);
 
+  /** Load saved products */
   useFocusEffect(
     React.useCallback(() => {
       const loadSaved = async () => {
@@ -228,62 +76,132 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const animateHeart = () => {
-    Animated.sequence([
-      Animated.timing(heartScale, {
-        toValue: 1.4,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(heartScale, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
+  /** Shimmer Animation for Button */
   useEffect(() => {
-    if (loading) {
-      const interval = setInterval(() => {
-        Animated.timing(fadeLoaderAnim, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.inOut(Easing.quad),
+    const loop = () => {
+      shimmerAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.linear,
           useNativeDriver: true,
-        }).start(() => {
-          setStep((prev) => (prev + 1) % messages.length);
-          Animated.timing(fadeLoaderAnim, {
-            toValue: 1,
-            duration: 400,
-            easing: Easing.inOut(Easing.quad),
-            useNativeDriver: true,
-          }).start();
-        });
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [loading]);
+        }),
+        Animated.delay(4000),
+      ]).start(() => loop());
+    };
+    loop();
+  }, []);
 
-  function extractPrice(text: string): string {
+  /** Price extractor */
+  const extractPrice = (text: string): string => {
     const match = text.match(/₹\s*\d+/);
     return match ? match[0] : "N/A";
-  }
+  };
 
+  /** Detect current location */
+  const getCurrentLocation = async (force = false): Promise<string | null> => {
+    try {
+      if (!force) {
+        const cached = await AsyncStorage.getItem("locationInfo");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setLocationInfo(parsed);
+          setPincode(parsed.pincode);
+          return parsed.pincode;
+        }
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Toast.show({
+          type: "error",
+          text1: "Permission Denied",
+          text2: "Please allow location access to detect your area.",
+          position: "top",
+        });
+        return null;
+      }
+
+      // Get GPS coordinates with high accuracy
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+      });
+
+      // Try reverse geocoding
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      let info = geocode[0];
+      if (!info) {
+        throw new Error("No address info found.");
+      }
+
+      const newLocation = {
+        city: info.city ?? info.subregion ?? info.region ?? "Unknown City",
+        area: info.name ?? info.district ?? "Unknown Area",
+        pincode: info.postalCode ?? "",
+      };
+
+      if (!newLocation.pincode) {
+        Toast.show({
+          type: "info",
+          text1: "Location Detected",
+          text2: `${newLocation.area}, ${newLocation.city} (pincode not found)`,
+          position: "top",
+        });
+      }
+
+      setLocationInfo(newLocation);
+      setPincode(newLocation.pincode);
+      await AsyncStorage.setItem("locationInfo", JSON.stringify(newLocation));
+
+      return newLocation.pincode;
+    } catch (err) {
+      console.error("📍 Location error:", err);
+      Toast.show({
+        type: "error",
+        text1: "Location Error",
+        text2: "Unable to detect location. Please try again.",
+        position: "top",
+      });
+      return null;
+    }
+  };
+
+
+  /** Compare Button Handler */
   const handleCompare = async () => {
-    if (!product || !pincode) {
-      Alert.alert("Missing Info", "Please enter both product and pincode.");
+    const trimmedProduct = product.trim();
+    const trimmedPincode = pincode.trim();
+
+    if (!trimmedProduct || !trimmedPincode) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Info",
+        text2: "Please enter a product name before comparing.",
+        position: "top",
+      });
       return;
     }
 
     setLoading(true);
     setResults([]);
+    setStep(0);
+    let stepIndex = 0;
+
+    const messageInterval = setInterval(() => {
+      stepIndex = (stepIndex + 1) % messages.length;
+      setStep(stepIndex);
+    }, 2000);
 
     try {
-      const response = await scrapePlatform("all", pincode, product);
+      const response = await scrapePlatform("all", trimmedPincode, trimmedProduct);
       const data = response?.data || {};
 
-      const combined = [
+      const combined: Product[] = [
         ...(data.blinkit || []).map((item: any) => ({
           ...item,
           price: extractPrice(item.price),
@@ -306,14 +224,25 @@ export default function HomeScreen() {
         })),
       ];
 
-      const order = ["Blinkit", "Zepto", "Swiggy", "Flipkart"];
-      combined.sort((a, b) => order.indexOf(a.platform) - order.indexOf(b.platform));
-
       setResults(combined);
-    } catch (err: any) {
-      console.error("❌ API Error:", err.message);
-      Alert.alert("Error", "Failed to fetch comparison data. Try again.");
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: `Prices loaded for "${trimmedProduct}" in ${trimmedPincode}`,
+        position: "top",
+      });
+      setSuccess(true);
+      setTimeout(() => setProduct(""), 400);
+      setTimeout(() => setSuccess(false), 1500);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to fetch comparison data. Try again.",
+        position: "top",
+      });
     } finally {
+      clearInterval(messageInterval);
       setLoading(false);
     }
   };
@@ -330,7 +259,6 @@ export default function HomeScreen() {
     { name: "Vegetables", icon: "🥦" },
   ];
 
-  // 🎨 Platform brand colors
   const platformColors: Record<string, string> = {
     Blinkit: "#FFD84D",
     Zepto: "#9C1AFF",
@@ -340,45 +268,13 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* 🌟 Floating sparkles */}
-      <Animated.View
-        style={[
-          styles.sparkle,
-          { top: 60, left: 40, transform: [{ translateY: floatAnim1 }] },
-        ]}
-      >
-        <Ionicons name="sparkles" size={32} color={colors.primary} style={{ opacity: 0.2 }} />
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          styles.sparkle,
-          { top: 120, right: 60, transform: [{ translateY: floatAnim2 }] },
-        ]}
-      >
-        <Ionicons
-          name="sparkles-outline"
-          size={36}
-          color={colors.primary}
-          style={{ opacity: 0.25 }}
-        />
-      </Animated.View>
-
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ✨ Header */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideUpAnim }],
-            },
-          ]}
-        >
+        {/* Header */}
+        <View style={styles.header}>
           <Text style={[styles.heading, { color: colors.text }]}>
             Compare <Text style={{ color: colors.primary }}>Prices.</Text>
           </Text>
@@ -386,48 +282,79 @@ export default function HomeScreen() {
           <Text style={[styles.desc, { color: colors.secondaryText }]}>
             Real-time price comparison across all major platforms
           </Text>
-        </Animated.View>
+        </View>
 
-        {/* 🔍 Search Card */}
-        <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.border }]}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
-            <TextInput
-              placeholder="Search for product"
-              placeholderTextColor={colors.secondaryText}
-              value={product}
-              onChangeText={setProduct}
-              style={[styles.input, { color: colors.text }]}
-            />
-          </View>
-          <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <Ionicons name="location" size={20} color={colors.secondaryText} style={styles.icon} />
-            <TextInput
-              placeholder="Pincode"
-              keyboardType="numeric"
-              placeholderTextColor={colors.secondaryText}
-              value={pincode}
-              onChangeText={setPincode}
-              style={[styles.input, { color: colors.text }]}
-            />
+        {/* Location Banner (Blinkit-style) */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => getCurrentLocation(true)}
+          style={[
+            styles.locationBanner,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="location" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+          <View style={{ flex: 1 }}>
+            {locationInfo.area || locationInfo.city ? (
+              <>
+                <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
+                  Home – {locationInfo.area || "Unknown Area"}, {locationInfo.city || "Unknown City"}
+                </Text>
+                <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+                  {locationInfo.pincode ? `Pincode: ${locationInfo.pincode}` : "Pincode not available"}
+                </Text>
+              </>
+            ) : (
+              <Text style={{ color: colors.secondaryText, fontSize: 14 }}>
+                Tap to detect your location
+              </Text>
+            )}
           </View>
 
-          {/* Compare Button */}
-          <TouchableOpacity onPress={handleCompare} activeOpacity={0.8}>
-            <View style={styles.buttonWrapper}>
-              <LinearGradient
-                colors={[colors.primary, "#0cc6e9"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.button}
-              >
+          <Ionicons name="chevron-down" size={18} color={colors.secondaryText} />
+        </TouchableOpacity>
+
+        {/* Search Input */}
+        <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
+          <TextInput
+            placeholder="Search for product"
+            placeholderTextColor={colors.secondaryText}
+            value={product}
+            onChangeText={setProduct}
+            style={[styles.input, { color: colors.text }]}
+          />
+        </View>
+
+        {/* Compare Button */}
+        <TouchableOpacity onPress={handleCompare} activeOpacity={0.8} disabled={loading || success}>
+          <View style={[styles.buttonWrapper, loading && { opacity: 0.8 }]}>
+            <LinearGradient
+              colors={loading ? [colors.border, colors.border] : [colors.primary, "#0cc6e9"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.button}
+            >
+              {loading ? (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                    {messages[step].title}
+                  </Text>
+                </View>
+              ) : success ? (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 6 }]}>Done</Text>
+                </View>
+              ) : (
                 <Text style={styles.buttonText}>Compare</Text>
-              </LinearGradient>
+              )}
+            </LinearGradient>
+
+            {!loading && (
               <Animated.View
-                style={[
-                  styles.shimmerOverlay,
-                  { transform: [{ translateX: shimmerTranslate }] },
-                ]}
+                style={[styles.shimmerOverlay, { transform: [{ translateX: shimmerTranslate }] }]}
               >
                 <LinearGradient
                   colors={["transparent", "rgba(255,255,255,0.3)", "transparent"]}
@@ -436,46 +363,42 @@ export default function HomeScreen() {
                   style={styles.shimmerGradient}
                 />
               </Animated.View>
-            </View>
-          </TouchableOpacity>
-        </View>
+            )}
+          </View>
+        </TouchableOpacity>
 
-        {/* 🛍️ Categories */}
+        {/* Categories */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Categories</Text>
         <View style={styles.grid}>
           {categories.map((cat, i) => (
-            <View key={i} style={[styles.catCard, { backgroundColor: colors.card, shadowColor: colors.border }]}>
+            <TouchableOpacity
+              key={i}
+              activeOpacity={0.8}
+              style={[styles.catCard, { backgroundColor: colors.card }]}
+              onPress={async () => {
+                let detectedPin = await getCurrentLocation(false);
+                if (!detectedPin) detectedPin = await getCurrentLocation(true);
+                if (!detectedPin) return;
+                setProduct(cat.name);
+                handleCompare();
+              }}
+            >
               <Text style={styles.catIcon}>{cat.icon}</Text>
               <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
-        {/* 📊 Results */}
+        {/* Results */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
-
         {loading && (
           <View style={{ alignItems: "center", marginVertical: 30 }}>
-            <Animated.Text
-              style={{
-                opacity: fadeLoaderAnim,
-                fontSize: 18,
-                fontWeight: "700",
-                color: colors.primary,
-              }}
-            >
+            <Text style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}>
               {messages[step].icon} {messages[step].title}
-            </Animated.Text>
-            <Animated.Text
-              style={{
-                opacity: fadeLoaderAnim,
-                fontSize: 14,
-                color: colors.secondaryText,
-                marginTop: 6,
-              }}
-            >
+            </Text>
+            <Text style={{ fontSize: 14, color: colors.secondaryText, marginTop: 6 }}>
               {messages[step].subtitle}
-            </Animated.Text>
+            </Text>
           </View>
         )}
 
@@ -488,45 +411,59 @@ export default function HomeScreen() {
         {!loading && results.length > 0 && (
           <FlatList
             data={results}
-            keyExtractor={(_, i) => i.toString()}
+            keyExtractor={(item, index) => item.title + item.platform + index}
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
             scrollEnabled={false}
             renderItem={({ item }) => (
-              <ProductCard
-                item={item}
-                colors={colors}
-                saveProduct={saveProduct}
-                isItemSaved={isItemSaved}
-                platformColors={platformColors}
-              />
+              <View
+                style={[
+                  styles.cardBox,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <Image
+                  source={{
+                    uri:
+                      item.image ||
+                      "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
+                  }}
+                  style={styles.cardImage}
+                />
+                <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
+                  {item.title || "Unnamed"}
+                </Text>
+                <Text style={[styles.cardPrice, { color: colors.primary }]}>{item.price}</Text>
+                <View
+                  style={{
+                    alignSelf: "flex-start",
+                    backgroundColor: platformColors[item.platform] || "#ccc",
+                    borderRadius: 20,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    marginTop: 8,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
+                    {item.platform}
+                  </Text>
+                </View>
+              </View>
             )}
           />
-
-
-
         )}
       </ScrollView>
     </View>
   );
 }
 
+/** Styles */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  sparkle: { position: "absolute", zIndex: 0 },
-  header: { alignItems: "center", marginTop: 20, marginBottom: 5 },
+  header: { alignItems: "center", marginTop: 20, marginBottom: 10 },
   heading: { fontSize: 28, fontWeight: "800" },
   subheading: { fontSize: 28, fontWeight: "800" },
   desc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
-  card: {
-    borderRadius: 20,
-    marginTop: -2,
-    padding: 10,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
-    marginVertical: 10,
-  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -534,6 +471,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 10,
     paddingHorizontal: 10,
+  },
+  locationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
   },
   icon: { marginRight: 8 },
   input: { flex: 1, height: 45, fontSize: 15 },
@@ -550,8 +496,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: "center",
     marginBottom: 5,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
     elevation: 2,
   },
   catIcon: { fontSize: 18 },
@@ -562,8 +506,6 @@ const styles = StyleSheet.create({
     width: "48%",
     marginBottom: 10,
     padding: 10,
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
     elevation: 3,
   },
   cardImage: { width: "100%", height: 100, borderRadius: 10, resizeMode: "contain" },

@@ -64,7 +64,7 @@ function ThemedTabs() {
               borderRadius: 10,
               position: "absolute",
               marginHorizontal: 0,
-              marginBottom: -70,
+              marginBottom: -20,
               paddingBottom: insets.bottom, // 👈 ensure it stays above navbar
               paddingTop: 10,
             },
@@ -99,7 +99,7 @@ function ThemedTabs() {
           /> */}
 
           {/* ❤️ SAVED */}
-          <Tabs.Screen
+          {/* <Tabs.Screen
             name="saved"
             options={{
               title: "Saved",
@@ -107,7 +107,7 @@ function ThemedTabs() {
                 <Ionicons name={focused ? "heart" : "heart-outline"} size={26} color={color} />
               ),
             }}
-          />
+          /> */}
 
           {/* 👤 PROFILE */}
           <Tabs.Screen
