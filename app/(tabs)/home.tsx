@@ -43,7 +43,8 @@ export default function HomeScreen() {
   const [results, setResults] = useState<Product[]>([]);
   const [savedItems, setSavedItems] = useState<Product[]>([]);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
-const [manualPincode, setManualPincode] = useState("");
+  const [manualPincode, setManualPincode] = useState("");
+  const [isManualLocation, setIsManualLocation] = useState(false);
 
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -288,33 +289,46 @@ const [manualPincode, setManualPincode] = useState("");
         </View>
 
         {/* Location Banner (Blinkit-style) */}
-<TouchableOpacity
-  activeOpacity={0.8}
-  onPress={() => setLocationModalVisible(true)}
-  style={[
-    styles.locationBanner,
-    { backgroundColor: colors.card, borderColor: colors.border },
-  ]}
->
-  <Ionicons name="location" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-  <View style={{ flex: 1 }}>
-    {locationInfo.area || locationInfo.city ? (
-      <>
-        <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
-          Home – {locationInfo.area || ""}, {locationInfo.city || ""}
-        </Text>
-        <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
-          {locationInfo.pincode ? `Pincode: ${locationInfo.pincode}` : "Tap to set manually"}
-        </Text>
-      </>
-    ) : (
-      <Text style={{ color: colors.secondaryText, fontSize: 14 }}>
-        Tap to detect or set your location
-      </Text>
-    )}
-  </View>
-  <Ionicons name="chevron-down" size={18} color={colors.secondaryText} />
-</TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setLocationModalVisible(true)}
+          style={[
+            styles.locationBanner,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="location" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+          <View style={{ flex: 1 }}>
+            {locationInfo.area || locationInfo.city ? (
+              <>
+                {isManualLocation ? (
+                  <>
+                    <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
+                      Home – {locationInfo.area || ""}, {locationInfo.city || ""}
+                    </Text>
+                    <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+                      {locationInfo.pincode
+                        ? `Pincode: ${locationInfo.pincode}`
+                        : "Tap to set manually"}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+                    {locationInfo.pincode
+                      ? `Pincode: ${locationInfo.pincode}`
+                      : "Tap to set manually"}
+                  </Text>
+                )}
+
+              </>
+            ) : (
+              <Text style={{ color: colors.secondaryText, fontSize: 14 }}>
+                Tap to detect or set your location
+              </Text>
+            )}
+          </View>
+          <Ionicons name="chevron-down" size={18} color={colors.secondaryText} />
+        </TouchableOpacity>
 
 
         {/* Search Input */}
@@ -458,76 +472,77 @@ const [manualPincode, setManualPincode] = useState("");
       </ScrollView>
 
       {locationModalVisible && (
-  <View style={styles.modalBackdrop}>
-    <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
-      <Text style={[styles.modalTitle, { color: colors.text }]}>Set Location</Text>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Set Location</Text>
 
-      <TouchableOpacity
-        style={styles.modalOption}
-        onPress={async () => {
-          await getCurrentLocation(true);
-          setLocationModalVisible(false);
-        }}
-      >
-        <Ionicons name="navigate" size={20} color={colors.primary} style={{ marginRight: 10 }} />
-        <Text style={{ color: colors.text, fontSize: 15 }}>Detect Automatically</Text>
-      </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={async () => {
+                await getCurrentLocation(true);
+                setLocationModalVisible(false);
+              }}
+            >
+              <Ionicons name="navigate" size={20} color={colors.primary} style={{ marginRight: 10 }} />
+              <Text style={{ color: colors.text, fontSize: 15 }}>Detect Automatically</Text>
+            </TouchableOpacity>
 
-      <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.background }]}>
-        <Ionicons name="pin" size={18} color={colors.secondaryText} style={styles.icon} />
-        <TextInput
-          placeholder="Enter Pincode manually"
-          keyboardType="numeric"
-          value={manualPincode}
-          onChangeText={setManualPincode}
-          style={[styles.input, { color: colors.text }]}
-        />
-      </View>
+            <View style={[styles.inputContainer, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              <Ionicons name="pin" size={18} color={colors.secondaryText} style={styles.icon} />
+              <TextInput
+                placeholder="Enter Pincode manually"
+                placeholderTextColor={colors.text} // 👈 Add this
+                keyboardType="numeric"
+                value={manualPincode}
+                onChangeText={setManualPincode}
+                style={[styles.input, { color: colors.text }]}
+              />
+            </View>
 
-      <TouchableOpacity
-        onPress={async () => {
-          if (!manualPincode || manualPincode.length !== 6) {
-            Toast.show({
-              type: "error",
-              text1: "Invalid Pincode",
-              text2: "Please enter a valid 6-digit pincode.",
-              position: "top",
-            });
-            return;
-          }
-          const newLoc = { city: "Manual Entry", area: "Custom Area", pincode: manualPincode };
-          setLocationInfo(newLoc);
-          setPincode(manualPincode);
-          await AsyncStorage.setItem("locationInfo", JSON.stringify(newLoc));
-          setLocationModalVisible(false);
-          Toast.show({
-            type: "success",
-            text1: "Location Updated",
-            text2: `Set manually to ${manualPincode}`,
-            position: "top",
-          });
-        }}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={[colors.primary, "#0cc6e9"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.button, { marginTop: 10 }]}
-        >
-          <Text style={styles.buttonText}>Save Location</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                if (!manualPincode || manualPincode.length !== 6) {
+                  Toast.show({
+                    type: "error",
+                    text1: "Invalid Pincode",
+                    text2: "Please enter a valid 6-digit pincode.",
+                    position: "top",
+                  });
+                  return;
+                }
+                const newLoc = { city: "Manual Entry", area: "Custom Area", pincode: manualPincode };
+                setLocationInfo(newLoc);
+                setPincode(manualPincode);
+                await AsyncStorage.setItem("locationInfo", JSON.stringify(newLoc));
+                setLocationModalVisible(false);
+                Toast.show({
+                  type: "success",
+                  text1: "Location Updated",
+                  text2: `Set manually to ${manualPincode}`,
+                  position: "top",
+                });
+              }}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.primary, "#0cc6e9"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.button, { marginTop: 10 }]}
+              >
+                <Text style={styles.buttonText}>Save Location</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-      <TouchableOpacity
-        onPress={() => setLocationModalVisible(false)}
-        style={{ marginTop: 10 }}
-      >
-        <Text style={{ color: colors.secondaryText, textAlign: "center" }}>Cancel</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-)}
+            <TouchableOpacity
+              onPress={() => setLocationModalVisible(false)}
+              style={{ marginTop: 10 }}
+            >
+              <Text style={{ color: colors.secondaryText, textAlign: "center" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
     </View>
   );
@@ -589,37 +604,37 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 16, fontWeight: "700", marginTop: 4 },
 
   modalBackdrop: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "rgba(0,0,0,0.3)",
-  justifyContent: "flex-end",
-},
-modalContainer: {
-  borderTopLeftRadius: 20,
-  borderTopRightRadius: 20,
-  padding: 20,
-  shadowOpacity: 0.1,
-  shadowRadius: 6,
-  elevation: 10,
-},
-modalTitle: {
-  fontSize: 18,
-  fontWeight: "700",
-  marginBottom: 12,
-  textAlign: "center",
-},
-modalOption: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 12,
-  borderWidth: 1,
-  borderColor: "#ddd",
-  borderRadius: 10,
-  paddingHorizontal: 10,
-  marginBottom: 10,
-},
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 25,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
 
 });
