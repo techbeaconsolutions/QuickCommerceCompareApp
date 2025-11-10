@@ -232,8 +232,53 @@ export default function HomeScreen() {
     { name: "Vegetables", icon: "🥦" },
   ];
 
-  const floatAnim1 = useRef(new Animated.Value(0)).current;
-  const floatAnim2 = useRef(new Animated.Value(0)).current;
+const floatAnim1 = useRef(new Animated.Value(0)).current;
+const floatAnim2 = useRef(new Animated.Value(0)).current;
+const opacityAnim1 = useRef(new Animated.Value(1)).current;
+const opacityAnim2 = useRef(new Animated.Value(1)).current;
+
+// Floating animation (up & down)
+useEffect(() => {
+  const createFloatAndFade = (
+    floatAnim: Animated.Value,
+    opacityAnim: Animated.Value,
+    delay = 0
+  ) => {
+    Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(floatAnim, {
+            toValue: -12,
+            duration: 2200,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(floatAnim, {
+            toValue: 10,
+            duration: 2200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(opacityAnim, {
+            toValue: 0.3,
+            duration: 2000,
+            delay: delay + 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    ).start();
+  };
+
+  createFloatAndFade(floatAnim1, opacityAnim1);
+  createFloatAndFade(floatAnim2, opacityAnim2, 800); // offset for natural motion
+}, []);
 
   const platformColors: Record<string, string> = {
     Blinkit: "#FFD84D",
