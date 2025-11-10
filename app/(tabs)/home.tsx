@@ -302,6 +302,14 @@ export default function HomeScreen() {
             {locationInfo.area || locationInfo.city ? (
               <>
                 {isManualLocation ? (
+                  // 👇 When manually entered → only show Pincode
+                  <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+                    {locationInfo.pincode
+                      ? `Pincode: ${locationInfo.pincode}`
+                      : "Tap to set manually"}
+                  </Text>
+                ) : (
+                  // 👇 When detected automatically → show Home + Pincode
                   <>
                     <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
                       Home – {locationInfo.area || ""}, {locationInfo.city || ""}
@@ -312,13 +320,8 @@ export default function HomeScreen() {
                         : "Tap to set manually"}
                     </Text>
                   </>
-                ) : (
-                  <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
-                    {locationInfo.pincode
-                      ? `Pincode: ${locationInfo.pincode}`
-                      : "Tap to set manually"}
-                  </Text>
                 )}
+
 
               </>
             ) : (
@@ -480,6 +483,7 @@ export default function HomeScreen() {
               style={styles.modalOption}
               onPress={async () => {
                 await getCurrentLocation(true);
+                  setIsManualLocation(false); // ✅ auto-detect → false
                 setLocationModalVisible(false);
               }}
             >
