@@ -127,21 +127,17 @@ export default function HomeScreen() {
         return null;
       }
 
-      // Get GPS coordinates with high accuracy
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
 
-      // Try reverse geocoding
       const geocode = await Location.reverseGeocodeAsync({
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
       });
 
       let info = geocode[0];
-      if (!info) {
-        throw new Error("No address info found.");
-      }
+      if (!info) throw new Error("No address info found.");
 
       const newLocation = {
         city: info.city ?? info.subregion ?? info.region ?? "Unknown City",
@@ -149,19 +145,9 @@ export default function HomeScreen() {
         pincode: info.postalCode ?? "",
       };
 
-      if (!newLocation.pincode) {
-        Toast.show({
-          type: "info",
-          text1: "Location Detected",
-          text2: `${newLocation.area}, ${newLocation.city} (pincode not found)`,
-          position: "top",
-        });
-      }
-
       setLocationInfo(newLocation);
       setPincode(newLocation.pincode);
       await AsyncStorage.setItem("locationInfo", JSON.stringify(newLocation));
-
       return newLocation.pincode;
     } catch (err) {
       console.error("📍 Location error:", err);
@@ -174,7 +160,6 @@ export default function HomeScreen() {
       return null;
     }
   };
-
 
   /** Compare Button Handler */
   const handleCompare = async () => {
@@ -206,26 +191,10 @@ export default function HomeScreen() {
       const data = response?.data || {};
 
       const combined: Product[] = [
-        ...(data.blinkit || []).map((item: any) => ({
-          ...item,
-          price: extractPrice(item.price),
-          platform: "Blinkit",
-        })),
-        ...(data.zepto || []).map((item: any) => ({
-          ...item,
-          price: extractPrice(item.price),
-          platform: "Zepto",
-        })),
-        ...(data.swiggy || []).map((item: any) => ({
-          ...item,
-          price: extractPrice(item.price),
-          platform: "Swiggy",
-        })),
-        ...(data.flipkart || []).map((item: any) => ({
-          ...item,
-          price: extractPrice(item.price),
-          platform: "Flipkart",
-        })),
+        ...(data.blinkit || []).map((item: any) => ({ ...item, price: extractPrice(item.price), platform: "Blinkit" })),
+        ...(data.zepto || []).map((item: any) => ({ ...item, price: extractPrice(item.price), platform: "Zepto" })),
+        ...(data.swiggy || []).map((item: any) => ({ ...item, price: extractPrice(item.price), platform: "Swiggy" })),
+        ...(data.flipkart || []).map((item: any) => ({ ...item, price: extractPrice(item.price), platform: "Flipkart" })),
       ];
 
       setResults(combined);
@@ -263,6 +232,9 @@ export default function HomeScreen() {
     { name: "Vegetables", icon: "🥦" },
   ];
 
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
+
   const platformColors: Record<string, string> = {
     Blinkit: "#FFD84D",
     Zepto: "#9C1AFF",
@@ -272,6 +244,72 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* 🌈 Floating Gradient Stars */}
+      <View style={styles.starContainer}>
+        {Array.from({ length: 6 }).map((_, i) => {
+          const floatAnim = useRef(new Animated.Value(0)).current;
+          const spinAnim = useRef(new Animated.Value(0)).current;
+
+          useEffect(() => {
+            Animated.loop(
+              Animated.sequence([
+                Animated.timing(floatAnim, {
+                  toValue: -10,
+                  duration: 2500 + Math.random() * 1500,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(floatAnim, {
+                  toValue: 10,
+                  duration: 2500 + Math.random() * 1500,
+                  useNativeDriver: true,
+                }),
+              ])
+            ).start();
+
+            Animated.loop(
+              Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 5000 + Math.random() * 3000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+              })
+            ).start();
+          }, []);
+
+          const rotate = spinAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: ["0deg", "360deg"],
+          });
+
+          const size = 22 + Math.random() * 12;
+          const positionX = 50 + Math.random() * 260;
+          const positionY = 30 + Math.random() * 80;
+
+          return (
+            <><Animated.View
+              style={[
+                styles.sparkle,
+                { top: 60, left: 40, transform: [{ translateY: floatAnim1 }] },
+              ]}
+            >
+              <Ionicons name="sparkles" size={32} color={colors.primary} style={{ opacity: 0.2 }} />
+            </Animated.View><Animated.View
+              style={[
+                styles.sparkle,
+                { top: 120, right: 60, transform: [{ translateY: floatAnim2 }] },
+              ]}
+            >
+                <Ionicons
+                  name="sparkles-outline"
+                  size={36}
+                  color={colors.primary}
+                  style={{ opacity: 0.25 }} />
+              </Animated.View></>
+          );
+        })}
+      </View>
+
+      {/* Main Scroll */}
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -280,15 +318,15 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.heading, { color: colors.text }]}>
-            Compare <Text style={{ color: colors.primary }}>Prices.</Text>
+            Compare <Text style={{ color: "#0CC6E9" }}>Prices.</Text>
           </Text>
-          <Text style={[styles.subheading, { color: colors.primary }]}>Save Smart.</Text>
+          <Text style={[styles.subheading, { color: "#8A6FF0" }]}>Save Smart.</Text>
           <Text style={[styles.desc, { color: colors.secondaryText }]}>
             Real-time price comparison across all major platforms
           </Text>
         </View>
 
-        {/* Location Banner (Blinkit-style) */}
+        {/* Location Banner */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setLocationModalVisible(true)}
@@ -302,14 +340,12 @@ export default function HomeScreen() {
             {locationInfo.area || locationInfo.city ? (
               <>
                 {isManualLocation ? (
-                  // 👇 When manually entered → only show Pincode
                   <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
                     {locationInfo.pincode
                       ? `Pincode: ${locationInfo.pincode}`
                       : "Tap to set manually"}
                   </Text>
                 ) : (
-                  // 👇 When detected automatically → show Home + Pincode
                   <>
                     <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>
                       Home – {locationInfo.area || ""}, {locationInfo.city || ""}
@@ -321,8 +357,6 @@ export default function HomeScreen() {
                     </Text>
                   </>
                 )}
-
-
               </>
             ) : (
               <Text style={{ color: colors.secondaryText, fontSize: 14 }}>
@@ -333,9 +367,13 @@ export default function HomeScreen() {
           <Ionicons name="chevron-down" size={18} color={colors.secondaryText} />
         </TouchableOpacity>
 
-
         {/* Search Input */}
-        <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.inputContainer,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
+        >
           <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
           <TextInput
             placeholder="Search for product"
@@ -411,6 +449,7 @@ export default function HomeScreen() {
 
         {/* Results */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
+
         {loading && (
           <View style={{ alignItems: "center", marginVertical: 30 }}>
             <Text style={{ fontSize: 18, fontWeight: "700", color: colors.primary }}>
@@ -474,6 +513,7 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
+      {/* Popup Modal */}
       {locationModalVisible && (
         <View style={styles.popupBackdrop}>
           <View style={[styles.popupContainer, { backgroundColor: colors.card }]}>
@@ -544,17 +584,12 @@ export default function HomeScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setLocationModalVisible(false)}
-              style={{ marginTop: 12 }}
-            >
+            <TouchableOpacity onPress={() => setLocationModalVisible(false)} style={{ marginTop: 12 }}>
               <Text style={{ color: colors.secondaryText, textAlign: "center" }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
-
-
     </View>
   );
 }
@@ -562,6 +597,7 @@ export default function HomeScreen() {
 /** Styles */
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
+  sparkle: { position: "absolute", zIndex: 0 },
   header: { alignItems: "center", marginTop: 20, marginBottom: 10 },
   heading: { fontSize: 28, fontWeight: "800" },
   subheading: { fontSize: 28, fontWeight: "800" },
@@ -613,40 +649,6 @@ const styles = StyleSheet.create({
   cardImage: { width: "100%", height: 100, borderRadius: 10, resizeMode: "contain" },
   cardTitle: { fontSize: 14, fontWeight: "600", marginTop: 8 },
   cardPrice: { fontSize: 16, fontWeight: "700", marginTop: 4 },
-
-  modalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 40,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
   popupBackdrop: {
     position: "absolute",
     top: 0,
@@ -658,7 +660,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 100,
   },
-
   popupContainer: {
     width: "85%",
     borderRadius: 20,
@@ -670,5 +671,24 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     alignItems: "stretch",
   },
-
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, textAlign: "center" },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  starContainer: {
+    position: "absolute",
+    top: 20,
+    left: 0,
+    right: 0,
+    height: 150,
+    overflow: "visible",
+    zIndex: 0,
+  },
 });
