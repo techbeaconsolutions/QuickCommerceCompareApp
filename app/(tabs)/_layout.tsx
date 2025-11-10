@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Platform  } from "react-native";
+import { View, Platform, Dimensions } from "react-native";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -9,50 +9,59 @@ import {
   DefaultTheme as NavigationLightTheme,
 } from "@react-navigation/native";
 import { ThemeProvider, useTheme } from "../../context/ThemeContext";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // 👈 important
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { RFValue } from "react-native-responsive-fontsize"; // 👈 for responsive font scaling
 
 // 🎨 Themed Tabs using global theme
 function ThemedTabs() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const insets = useSafeAreaInsets(); // 👈 get device safe area
+  const insets = useSafeAreaInsets();
+  const { width, height } = Dimensions.get("window");
 
-  // 🧠 Log theme changes for debugging
+  // 🧠 Debug theme change
   useEffect(() => {
     console.log("🎨 Current Theme:", theme);
   }, [theme]);
 
-  // 🌗 Build a custom navigation theme
+  // 🌗 Custom navigation theme
   const navigationTheme = isDark
     ? {
-        ...NavigationDarkTheme,
-        colors: {
-          ...NavigationDarkTheme.colors,
-          background: "#121212",
-          card: "#1e1e1e",
-          text: "#fff",
-          border: "#222",
-          primary: "#0cc6e9",
-        },
-      }
+      ...NavigationDarkTheme,
+      colors: {
+        ...NavigationDarkTheme.colors,
+        background: "#121212",
+        card: "#1e1e1e",
+        text: "#fff",
+        border: "#222",
+        primary: "#0cc6e9",
+      },
+    }
     : {
-        ...NavigationLightTheme,
-        colors: {
-          ...NavigationLightTheme.colors,
-          background: "#f9fcff",
-          card: "#ffffff",
-          text: "#111",
-          border: "#ddd",
-          primary: "#0871da",
-        },
-      };
+      ...NavigationLightTheme,
+      colors: {
+        ...NavigationLightTheme.colors,
+        background: "#f9fcff",
+        card: "#ffffff",
+        text: "#111",
+        border: "#ddd",
+        primary: "#0871da",
+      },
+    };
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
-      <View style={{ flex: 1, backgroundColor: navigationTheme.colors.background, paddingBottom: insets.bottom }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: navigationTheme.colors.background,
+          paddingBottom: insets.bottom,
+        }}
+      >
         <StatusBar style={isDark ? "light" : "dark"} />
+
         <Tabs
-          key={theme} // 👈 Forces Tabs to re-render when theme changes
+          key={theme} // 👈 re-render tabs when theme changes
           screenOptions={{
             headerShown: false,
             tabBarShowLabel: true,
@@ -60,16 +69,29 @@ function ThemedTabs() {
               backgroundColor: navigationTheme.colors.card,
               borderTopWidth: 0,
               elevation: 10,
-              height: 80 + (Platform.OS === "android" ? insets.bottom : 0), // 👈 add extra height
-              borderRadius: 10,
+              height: Math.max(60, height * 0.09) + insets.bottom, // ✅ responsive height
+              paddingBottom: insets.bottom,
+              paddingTop: 6,
+              borderRadius: 5,
               position: "absolute",
-              marginHorizontal: 0,
-              marginBottom: -20,
-              paddingBottom: insets.bottom, // 👈 ensure it stays above navbar
-              paddingTop: 10,
+              left: width * 0.05, // ✅ responsive horizontal margin
+              right: width * 0.05,
+              bottom: insets.bottom > 0 ? insets.bottom / 2 : 10, // ✅ sits above nav bar
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 6,
             },
             tabBarActiveTintColor: navigationTheme.colors.primary,
             tabBarInactiveTintColor: isDark ? "#aaa" : "#666",
+            tabBarLabelStyle: {
+              fontSize: RFValue(11), // ✅ scales with screen size
+              fontWeight: "600",
+              marginBottom: 4,
+            },
+            tabBarIconStyle: {
+              marginBottom: -4,
+            },
           }}
         >
           {/* 🏠 HOME */}
@@ -78,36 +100,14 @@ function ThemedTabs() {
             options={{
               title: "Home",
               tabBarIcon: ({ color, focused }) => (
-                <Ionicons name={focused ? "home" : "home-outline"} size={26} color={color} />
-              ),
-            }}
-          />
-
-          {/* 🔁 COMPARE */}
-          {/* <Tabs.Screen
-            name="compare"
-            options={{
-              title: "Compare",
-              tabBarIcon: ({ color, focused }) => (
                 <Ionicons
-                  name={focused ? "git-compare" : "git-compare-outline"}
+                  name={focused ? "home" : "home-outline"}
                   size={26}
                   color={color}
                 />
               ),
             }}
-          /> */}
-
-          {/* ❤️ SAVED */}
-          {/* <Tabs.Screen
-            name="saved"
-            options={{
-              title: "Saved",
-              tabBarIcon: ({ color, focused }) => (
-                <Ionicons name={focused ? "heart" : "heart-outline"} size={26} color={color} />
-              ),
-            }}
-          /> */}
+          />
 
           {/* 👤 PROFILE */}
           <Tabs.Screen
@@ -115,7 +115,11 @@ function ThemedTabs() {
             options={{
               title: "Profile",
               tabBarIcon: ({ color, focused }) => (
-                <Ionicons name={focused ? "person" : "person-outline"} size={26} color={color} />
+                <Ionicons
+                  name={focused ? "person" : "person-outline"}
+                  size={26}
+                  color={color}
+                />
               ),
             }}
           />
