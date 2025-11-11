@@ -1,18 +1,19 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": "@tsconfig/expo/tsconfig.base.json",
   "compilerOptions": {
+    "jsx": "react",
     "strict": true,
     "types": ["expo-linear-gradient"],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "src/api/scrape.js", "app/(tabs)/compare.tsx"  ]
+    "expo-env.d.ts",
+    "src/api/scrape.js",
+    "app/(tabs)/compare.tsx"
+  ]
 }
