@@ -76,7 +76,7 @@ function ThemedTabs() {
               position: "absolute",
               left: width * 0.05, // ✅ responsive horizontal margin
               right: width * 0.05,
-              bottom: insets.bottom > 0 ? insets.bottom / 2 : -20, // ✅ sits above nav bar
+              bottom: insets.bottom > 0 ? insets.bottom / 2 : -15, // ✅ sits above nav bar
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.15,

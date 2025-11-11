@@ -643,7 +643,7 @@ useEffect(() => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   sparkle: { position: "absolute", zIndex: 0 },
-  header: { alignItems: "center", marginTop: 25, marginBottom: 10 },
+  header: { alignItems: "center", marginTop: 35, marginBottom: 10 },
   heading: { fontSize: 28, fontWeight: "800" },
   subheading: { fontSize: 28, fontWeight: "800" },
   desc: { fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 },
