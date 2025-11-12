@@ -2,17 +2,28 @@ import { useEffect } from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useRouter, Href } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../src/context/AuthContext"; // 👈 import AuthContext
 
 export default function Splash() {
     const router = useRouter();
     const { colors } = useTheme();
+    const { token, loading } = useAuth(); // 👈 access login state
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            router.replace("/onboarding" as Href);
-        }, 2000);
-        return () => clearTimeout(timer);
-    }, [router]);
+        if (!loading) {
+            const timer = setTimeout(() => {
+                if (token) {
+                    // ✅ User is already logged in → go to Home
+                    router.replace("/(tabs)/home" as Href);
+                } else {
+                    // 🚪 New or logged-out user → go to Onboarding/Login
+                    router.replace("/onboarding" as Href);
+                }
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [router, token, loading]);
+
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
