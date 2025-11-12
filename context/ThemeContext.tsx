@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Appearance } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-type ThemeType = "light" | "dark";
+type ThemeMode = "light" | "dark";
 
 interface ThemeColors {
   background: string;
@@ -14,62 +14,64 @@ interface ThemeColors {
 }
 
 interface ThemeContextProps {
-  theme: ThemeType;
+  mode: ThemeMode; // 'light' | 'dark'
   colors: ThemeColors;
   toggleTheme: () => void;
 }
 
+const defaultColors: ThemeColors = {
+  background: "#f9fcff",
+  text: "#111",
+  card: "#ffffff",
+  border: "#ddd",
+  primary: "#0871da",
+  secondaryText: "#666",
+};
+
 const ThemeContext = createContext<ThemeContextProps>({
-  theme: "light",
-  colors: {
-    background: "#f9fcff",
-    text: "#111",
-    card: "#ffffff",
-    border: "#ddd",
-    primary: "#0871da",
-    secondaryText: "#666",
-  },
-  toggleTheme: () => {},
+  mode: "light",
+  colors: defaultColors,
+  toggleTheme: () => { },
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const systemTheme = Appearance.getColorScheme();
-  const [theme, setTheme] = useState<ThemeType>(systemTheme || "light");
+  const [mode, setMode] = useState<ThemeMode>(systemTheme || "light");
 
   useEffect(() => {
     (async () => {
       const stored = await AsyncStorage.getItem("theme");
-      if (stored) setTheme(stored as ThemeType);
+      if (stored === "light" || stored === "dark") setMode(stored);
     })();
   }, []);
 
   const toggleTheme = async () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    await AsyncStorage.setItem("theme", newTheme);
+    const newMode = mode === "light" ? "dark" : "light";
+    setMode(newMode);
+    await AsyncStorage.setItem("theme", newMode);
   };
 
   const colors: ThemeColors =
-    theme === "dark"
+    mode === "dark"
       ? {
-          background: "#121212",
-          text: "#fff",
-          card: "#1e1e1e",
-          border: "#222",
-          primary: "#0cc6e9",
-          secondaryText: "#aaa",
-        }
+        background: "#121212",
+        text: "#ffffff",
+        card: "#1e1e1e",
+        border: "#222",
+        primary: "#0cc6e9",
+        secondaryText: "#aaa",
+      }
       : {
-          background: "#f9fcff",
-          text: "#111",
-          card: "#ffffff",
-          border: "#ddd",
-          primary: "#0871da",
-          secondaryText: "#666",
-        };
+        background: "#f9fcff",
+        text: "#111",
+        card: "#ffffff",
+        border: "#ddd",
+        primary: "#0871da",
+        secondaryText: "#666",
+      };
 
   return (
-    <ThemeContext.Provider value={{ theme, colors, toggleTheme }}>
+    <ThemeContext.Provider value={{ mode, colors, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

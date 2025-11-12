@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -8,28 +8,64 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, Href } from "expo-router";
+import Toast from "react-native-toast-message";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function SignupScreen() {
   const router = useRouter();
+const { signup } = useAuth();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      alert("Please fill in all fields");
+      Toast.show({
+        type: "error",
+        text1: "Missing fields",
+        text2: "Please fill in all required details.",
+      });
       return;
     }
+
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      Toast.show({
+        type: "error",
+        text1: "Password mismatch",
+        text2: "Passwords do not match.",
+      });
       return;
     }
-    alert("🎉 Account created successfully!");
-    router.replace("/(tabs)/home" as Href);
+
+    try {
+      setLoading(true);
+      await signup(name, email, password);
+
+      Toast.show({
+        type: "success",
+        text1: "Account created 🎉",
+        text2: "Please log in to continue.",
+      });
+
+      // Redirect to login screen
+      router.replace("/auth/login" as Href);
+    } catch (err) {
+      console.error("Signup failed:", err);
+      Toast.show({
+        type: "error",
+        text1: "Signup Failed",
+        text2: "Email may already be in use or invalid.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -83,6 +119,7 @@ export default function SignupScreen() {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
 
@@ -113,14 +150,22 @@ export default function SignupScreen() {
           </View>
 
           {/* Sign Up Button */}
-          <TouchableOpacity onPress={handleSignup} style={styles.signupButton}>
+          <TouchableOpacity
+            onPress={handleSignup}
+            style={styles.signupButton}
+            disabled={loading}
+          >
             <LinearGradient
               colors={["#fff", "#e0f7ff"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.signupGradient}
             >
-              <Text style={styles.signupText}>Create Account</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#0871da" />
+              ) : (
+                <Text style={styles.signupText}>Create Account</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 

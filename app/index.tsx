@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useRouter, Href } from "expo-router";
-import { useTheme } from "@/src/context/ThemeContext";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Splash() {
     const router = useRouter();
-    const theme = useTheme();
+    const { colors } = useTheme();
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -15,13 +15,13 @@ export default function Splash() {
     }, [router]);
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Image
-                source={require("@/assets/images/android-icon-foreground.png")}
+                source={require("../assets/images/android-icon-foreground.png")}
                 style={styles.logo}
             />
-            <Text style={[styles.title, { color: theme.text }]}>QuickCommerce</Text>
-            <Text style={[styles.subtitle, { color: theme.text }]}>
+            <Text style={[styles.title, { color: colors.text }]}>QuickCommerce</Text>
+            <Text style={[styles.subtitle, { color: colors.text }]}>
                 Compare. Save. Repeat.
             </Text>
         </View>

@@ -14,15 +14,15 @@ import { RFValue } from "react-native-responsive-fontsize"; // 👈 for responsi
 
 // 🎨 Themed Tabs using global theme
 function ThemedTabs() {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { mode } = useTheme();
+  const isDark = mode === "dark";
   const insets = useSafeAreaInsets();
   const { width, height } = Dimensions.get("window");
 
   // 🧠 Debug theme change
   useEffect(() => {
-    console.log("🎨 Current Theme:", theme);
-  }, [theme]);
+    console.log("🎨 Current Theme:", mode);
+  }, [mode]);
 
   // 🌗 Custom navigation theme
   const navigationTheme = isDark
@@ -61,7 +61,7 @@ function ThemedTabs() {
         <StatusBar style={isDark ? "light" : "dark"} />
 
         <Tabs
-          key={theme} // 👈 re-render tabs when theme changes
+          key={mode} // 👈 re-render tabs when theme changes
           screenOptions={{
             headerShown: false,
             tabBarShowLabel: true,

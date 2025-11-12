@@ -1,31 +1,26 @@
 // app/_layout.tsx
+import React from "react";
+import { View } from "react-native";
 import { Stack } from "expo-router";
-import Toast, {
-  BaseToast,
-  ErrorToast,
-  BaseToastProps,
-} from "react-native-toast-message";
+import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 import { StatusBar } from "expo-status-bar";
-import Animated, {
-  FadeInDown,
-  FadeOutUp,
-} from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
+import { AuthProvider } from "../src/context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
 
 // ✅ Custom Animated Toast wrapper
-const AnimatedToast = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <Animated.View
-      entering={FadeInDown.duration(400).springify()}
-      exiting={FadeOutUp.duration(300)}
-    >
-      {children}
-    </Animated.View>
-  );
-};
+const AnimatedToast = ({ children }) => (
+  <Animated.View
+    entering={FadeInDown.duration(400).springify()}
+    exiting={FadeOutUp.duration(300)}
+  >
+    {children}
+  </Animated.View>
+);
 
-// ✅ Toast Config with Animation + Theming
+// ✅ Toast Config with custom theme and animation
 const toastConfig = {
-  success: (props: BaseToastProps) => (
+  success: (props) => (
     <AnimatedToast>
       <BaseToast
         {...props}
@@ -47,8 +42,7 @@ const toastConfig = {
       />
     </AnimatedToast>
   ),
-
-  error: (props: BaseToastProps) => (
+  error: (props) => (
     <AnimatedToast>
       <ErrorToast
         {...props}
@@ -74,26 +68,29 @@ const toastConfig = {
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="light" />
+    <AuthProvider>
+      <ThemeProvider>
+        <View style={{ flex: 1 }}>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Splash & onboarding */}
+            <Stack.Screen name="splash" />
+            <Stack.Screen name="onboarding/index" />
 
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Splash & onboarding */}
-        <Stack.Screen name="splash" />
-        <Stack.Screen name="onboarding/index" />
+            {/* Auth */}
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/signup" />
+            <Stack.Screen name="auth/forgot-password" />
+            <Stack.Screen name="auth/otp" />
 
-        {/* Auth */}
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/signup" />
-        <Stack.Screen name="auth/forgot-password" />
-        <Stack.Screen name="auth/otp" />
+            {/* Tabs */}
+            <Stack.Screen name="(tabs)" />
+          </Stack>
 
-        {/* Tabs */}
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-
-      {/* ✅ Global Animated Toast */}
-      <Toast config={toastConfig} />
-    </>
+          {/* ✅ Toast placed inside root view */}
+          <Toast config={toastConfig} />
+        </View>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

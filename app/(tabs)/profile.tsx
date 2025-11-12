@@ -1,3 +1,4 @@
+// app/(tabs)/profile.tsx
 import React from "react";
 import {
   View,
@@ -5,28 +6,67 @@ import {
   StyleSheet,
   TouchableOpacity,
   Switch,
+  Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useTheme } from "../../context/ThemeContext"; // ✅ global theme
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
+import { useRouter } from "expo-router";
+import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../src/context/AuthContext";
 
 export default function ProfileScreen() {
-  const insets = useSafeAreaInsets(); // 👈 import this hook
-  const { theme, toggleTheme } = useTheme(); // ✅ from context
-  const isDark = theme === "dark";
+  const insets = useSafeAreaInsets();
+  const { mode, colors, toggleTheme } = useTheme();
+  const { logout, user } = useAuth();
+  const router = useRouter();
 
-  const user = { name: "Pratik Ostwal", email: "pratik@example.com" };
+  const isDark = mode === "dark";
 
-  const handleLogout = () => {
-    console.log("User logged out");
+  // --- DEBUG / DIAGNOSTIC handleLogout ---
+  const handleLogout = async () => {
+    console.log("[PROFILE] handleLogout called");
+
+    const confirmLogout =
+      Platform.OS === "web"
+        ? window.confirm("Are you sure you want to logout?")
+        : true; // fallback for testing mobile
+
+    if (!confirmLogout) return;
+
+    try {
+      await logout();
+      Toast.show({
+        type: "success",
+        text1: "Logged out successfully 👋",
+      });
+      router.replace("/auth/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+
+  // QUICK manual logout - use this to test without Alert
+  const forceLogoutNow = async () => {
+    console.log("[PROFILE] forceLogoutNow called (no alert)");
+    try {
+      if (typeof logout === "function") await logout();
+      router.replace("/auth/login");
+      Toast.show({ type: "success", text1: "Force logout success" });
+    } catch (err) {
+      console.error("[PROFILE] forceLogout error:", err);
+      Toast.show({ type: "error", text1: "Force logout failed", text2: String(err) });
+    }
   };
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: isDark ? "#121212" : "#f9fcff" },
+        { backgroundColor: isDark ? "#121212" : colors.background },
       ]}
     >
       {/* Header */}
@@ -36,11 +76,11 @@ export default function ProfileScreen() {
           size={90}
           color={isDark ? "#0cc6e9" : "#0871da"}
         />
-        <Text style={[styles.username, { color: isDark ? "#fff" : "#111" }]}>
-          {user.name}
+        <Text style={[styles.username, { color: colors.text }]}>
+          {user?.name || "Guest User"}
         </Text>
-        <Text style={[styles.email, { color: isDark ? "#aaa" : "#666" }]}>
-          {user.email}
+        <Text style={[styles.email, { color: colors.secondaryText }]}>
+          {user?.email || "guest@example.com"}
         </Text>
       </View>
 
@@ -59,7 +99,7 @@ export default function ProfileScreen() {
         <Text
           style={[
             styles.themeLabel,
-            { color: isDark ? "#fff" : "#111", flex: 1, marginLeft: 10 },
+            { color: colors.text, flex: 1, marginLeft: 10 },
           ]}
         >
           {isDark ? "Dark Mode" : "Light Mode"}
@@ -71,6 +111,7 @@ export default function ProfileScreen() {
           trackColor={{ false: "#ccc", true: "#0cc6e9" }}
         />
       </View>
+
       {/* Logout Button */}
       <TouchableOpacity onPress={handleLogout} style={{ marginTop: 24 }}>
         <LinearGradient
@@ -81,12 +122,22 @@ export default function ProfileScreen() {
         </LinearGradient>
       </TouchableOpacity>
 
+      {/* Force logout (for debugging): */}
+      {/* <TouchableOpacity
+        onPress={forceLogoutNow}
+        style={{ marginTop: 12, alignItems: "center" }}
+      >
+        <Text style={{ color: colors.text, textDecorationLine: "underline" }}>
+          Force logout (no confirm)
+        </Text>
+      </TouchableOpacity> */}
+
       <Text
         style={[
           styles.version,
           {
             color: isDark ? "#888" : "#aaa",
-            bottom: insets.bottom + 10, // 👈 Safe area aware
+            bottom: insets.bottom + 10,
           },
         ]}
       >

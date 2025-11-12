@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -7,21 +7,52 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, Href } from "expo-router";
+import Toast from "react-native-toast-message";
+import { useAuth  } from "../../src/context/AuthContext";
 
 export default function LoginScreen() {
   const router = useRouter();
+const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
-      alert("Please enter both email and password");
+      Toast.show({
+        type: "error",
+        text1: "Missing fields",
+        text2: "Please enter both email and password.",
+      });
       return;
     }
-    router.replace("/(tabs)/home" as Href); // ✅ Navigate to main app
+
+    try {
+      setLoading(true);
+      await login(email, password);
+
+      Toast.show({
+        type: "success",
+        text1: "Welcome back 👋",
+        text2: "You’re now signed in!",
+      });
+
+      router.replace("/(tabs)/home" as Href);
+    } catch (err) {
+      console.error("Login error:", err);
+      Toast.show({
+        type: "error",
+        text1: "Login Failed",
+        text2: "Invalid email or password.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,7 +66,6 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.innerContainer}
       >
-        {/* Title */}
         <Text style={styles.title}>Welcome Back 👋</Text>
         <Text style={styles.subtitle}>Sign in to continue shopping smart</Text>
 
@@ -49,6 +79,7 @@ export default function LoginScreen() {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            autoCapitalize="none"
           />
         </View>
 
@@ -73,14 +104,22 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Sign In Button */}
-        <TouchableOpacity onPress={handleLogin} style={styles.signInButton}>
+        <TouchableOpacity
+          onPress={handleLogin}
+          style={styles.signInButton}
+          disabled={loading}
+        >
           <LinearGradient
             colors={["#fff", "#e0f7ff"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.signInGradient}
           >
-            <Text style={styles.signInText}>Sign In</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#0871da" />
+            ) : (
+              <Text style={styles.signInText}>Sign In</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
 
