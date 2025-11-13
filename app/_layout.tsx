@@ -8,7 +8,10 @@ import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 import { AuthProvider } from "../src/context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 
-// ✅ Custom Animated Toast wrapper
+// ✅ ADD THESE
+import { useFonts } from "expo-font";
+import { Ionicons } from "@expo/vector-icons";
+
 const AnimatedToast = ({ children }) => (
   <Animated.View
     entering={FadeInDown.duration(400).springify()}
@@ -18,7 +21,6 @@ const AnimatedToast = ({ children }) => (
   </Animated.View>
 );
 
-// ✅ Toast Config with custom theme and animation
 const toastConfig = {
   success: (props) => (
     <AnimatedToast>
@@ -67,27 +69,29 @@ const toastConfig = {
 };
 
 export default function RootLayout() {
+
+  // ✅ Load Ionicons font (IMPORTANT)
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
+
+  if (!fontsLoaded) return null; // Wait until fonts load
+
   return (
     <AuthProvider>
       <ThemeProvider>
         <View style={{ flex: 1 }}>
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }}>
-            {/* Splash & onboarding */}
             <Stack.Screen name="splash" />
             <Stack.Screen name="onboarding/index" />
-
-            {/* Auth */}
             <Stack.Screen name="auth/login" />
             <Stack.Screen name="auth/signup" />
             <Stack.Screen name="auth/forgot-password" />
             <Stack.Screen name="auth/otp" />
-
-            {/* Tabs */}
             <Stack.Screen name="(tabs)" />
           </Stack>
 
-          {/* ✅ Toast placed inside root view */}
           <Toast config={toastConfig} />
         </View>
       </ThemeProvider>
