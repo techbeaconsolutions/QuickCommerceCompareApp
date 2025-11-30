@@ -2,23 +2,25 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// 🌐 Backend base URL
-const BASE_URL = "https://quickcommerce-backend-production-e429.up.railway.app";
+// -------------------------------------------------------------
+// 🟢 Backend API URL (YOUR CONTABO SERVER)
+// -------------------------------------------------------------
+const BASE_URL = "http://147.93.155.17:10000";
 
-// -----------------------------------------------------------
+// -------------------------------------------------------------
 // 🧠 AXIOS INSTANCE
-// -----------------------------------------------------------
+// -------------------------------------------------------------
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000, // 60 sec timeout (for Playwright scraping)
+  timeout: 120000, // Playwright scrapers take time
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// -----------------------------------------------------------
-// 🔐 REQUEST INTERCEPTOR — Attach JWT automatically
-// -----------------------------------------------------------
+// -------------------------------------------------------------
+// 🔐 REQUEST INTERCEPTOR → Attach JWT Token
+// -------------------------------------------------------------
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem("token");
@@ -30,35 +32,31 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// -----------------------------------------------------------
-// ⚠️ RESPONSE INTERCEPTOR — Handle errors globally
-// -----------------------------------------------------------
+// -------------------------------------------------------------
+// ⚠ RESPONSE INTERCEPTOR → Auto logout on 401
+// -------------------------------------------------------------
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response) {
-      if (error.response.status === 401) {
-        console.warn("⚠️ Token expired or unauthorized. Logging out...");
-        await AsyncStorage.removeItem("token");
-      }
-    } else {
-      console.error("🚨 Network Error:", error.message);
+    if (error.response?.status === 401) {
+      console.warn("⚠️ Token expired — clearing token!");
+      await AsyncStorage.removeItem("token");
     }
     return Promise.reject(error);
   }
 );
 
-// -----------------------------------------------------------
-// 🧱 AUTH ROUTES
-// -----------------------------------------------------------
+// -------------------------------------------------------------
+// 🔐 AUTH FUNCTIONS
+// -------------------------------------------------------------
 
-// 🔹 Signup new user
+// SIGNUP
 export async function signup(name, email, password) {
   const res = await api.post("/auth/signup", { name, email, password });
   return res.data;
 }
 
-// 🔹 Login existing user
+// LOGIN
 export async function login(email, password) {
   const res = await api.post("/auth/login", { email, password });
 
@@ -70,17 +68,16 @@ export async function login(email, password) {
   return res.data;
 }
 
-// 🔹 Logout user
+// LOGOUT
 export async function logout() {
   await AsyncStorage.removeItem("token");
-  console.log("✅ Logged out successfully");
 }
 
-// -----------------------------------------------------------
-// ⚙️ SCRAPER ROUTES (Protected)
-// -----------------------------------------------------------
+// -------------------------------------------------------------
+// 🛒 SCRAPER ENDPOINTS
+// -------------------------------------------------------------
 
-// 🔹 Generic platform scraper (blinkit / zepto / swiggy / all)
+// SINGLE PLATFORM SCRAPER
 export async function scrapePlatform(platform, pincode, product) {
   const res = await api.get(
     `/scrape/${platform}?pincode=${pincode}&product=${encodeURIComponent(
@@ -90,7 +87,7 @@ export async function scrapePlatform(platform, pincode, product) {
   return res.data;
 }
 
-// 🔹 All platforms (blinkit + zepto + swiggy together)
+// ALL SCRAPERS (Blinkit + Zepto + Swiggy)
 export async function scrapeAll(pincode, product) {
   const res = await api.get(
     `/scrape/all?pincode=${pincode}&product=${encodeURIComponent(product)}`
@@ -98,7 +95,7 @@ export async function scrapeAll(pincode, product) {
   return res.data;
 }
 
-// 🔹 Compare route (optional placeholder)
+// COMPARE
 export async function getCompare(pincode, product) {
   const res = await api.get(
     `/compare?pincode=${pincode}&product=${encodeURIComponent(product)}`
@@ -106,10 +103,21 @@ export async function getCompare(pincode, product) {
   return res.data;
 }
 
-// -----------------------------------------------------------
-// 🩺 HEALTH ROUTE — Check API uptime
-// -----------------------------------------------------------
+// HEALTH CHECK
 export async function getHealthStatus() {
   const res = await api.get("/health");
   return res.data;
 }
+
+// -------------------------------------------------------------
+// ✅ EXPORT EVERYTHING IN ONE DEFAULT OBJECT
+// -------------------------------------------------------------
+export default {
+  signup,
+  login,
+  logout,
+  scrapePlatform,
+  scrapeAll,
+  getCompare,
+  getHealthStatus,
+};

@@ -83,7 +83,7 @@ export default function RootLayout() {
         <View style={{ flex: 1 }}>
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="splash" />
+            <Stack.Screen name="index" />
             <Stack.Screen name="onboarding/index" />
             <Stack.Screen name="auth/login" />
             <Stack.Screen name="auth/signup" />

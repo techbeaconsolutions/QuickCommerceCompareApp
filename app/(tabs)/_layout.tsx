@@ -1,16 +1,16 @@
-import React, { useEffect } from "react";
-import { View, Platform, Dimensions } from "react-native";
-import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
 import {
-  ThemeProvider as NavigationThemeProvider,
-  DarkTheme as NavigationDarkTheme,
-  DefaultTheme as NavigationLightTheme,
+    DarkTheme as NavigationDarkTheme,
+    DefaultTheme as NavigationLightTheme,
+    ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
-import { ThemeProvider, useTheme } from "../../context/ThemeContext";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Tabs } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect } from "react";
+import { Dimensions, View } from "react-native";
 import { RFValue } from "react-native-responsive-fontsize"; // 👈 for responsive font scaling
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ThemeProvider, useTheme } from "../../context/ThemeContext";
 
 // 🎨 Themed Tabs using global theme
 function ThemedTabs() {
@@ -19,10 +19,7 @@ function ThemedTabs() {
   const insets = useSafeAreaInsets();
   const { width, height } = Dimensions.get("window");
 
-  // 🧠 Debug theme change
-  useEffect(() => {
-    console.log("🎨 Current Theme:", mode);
-  }, [mode]);
+  
 
   // 🌗 Custom navigation theme
   const navigationTheme = isDark
@@ -67,21 +64,18 @@ function ThemedTabs() {
             tabBarShowLabel: true,
             tabBarStyle: {
               backgroundColor: navigationTheme.colors.card,
+              height: 60,
               borderTopWidth: 0,
               elevation: 10,
-              height: Math.max(60, height * 0.09) + insets.bottom, // ✅ responsive height
-              paddingBottom: insets.bottom,
+              boxShadowColor: "#000",
+              boxShadowOpacity: 0.1,
+              boxShadowRadius: 4,
+              boxShadowOffset: { width: 0, height: -2 },
+              paddingBottom: 6,
               paddingTop: 6,
-              borderRadius: 5,
-              position: "absolute",
-              left: width * 0.05, // ✅ responsive horizontal margin
-              right: width * 0.05,
-              bottom: insets.bottom > 0 ? insets.bottom / 2 : -15, // ✅ sits above nav bar
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 6,
             },
+
+
             tabBarActiveTintColor: navigationTheme.colors.primary,
             tabBarInactiveTintColor: isDark ? "#aaa" : "#666",
             tabBarLabelStyle: {

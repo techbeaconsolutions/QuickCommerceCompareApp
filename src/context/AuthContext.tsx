@@ -49,7 +49,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (storedToken && storedUser) {
           setToken(JSON.parse(storedToken));
           setUser(JSON.parse(storedUser));
-          console.log("🔐 Restored user session:", JSON.parse(storedUser).email);
         }
       } catch (err) {
         console.error("❌ Error restoring auth state:", err);
@@ -70,7 +69,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setToken(res.token);
         await AsyncStorage.setItem("token", JSON.stringify(res.token));
         await AsyncStorage.setItem("user", JSON.stringify(res.user));
-        console.log("✅ Logged in:", res.user.email);
       } else {
         throw new Error("Login failed. Invalid credentials.");
       }
@@ -87,7 +85,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const res = await apiSignup(name, email, password);
       if (res.success && res.user) {
-        console.log("✅ Signup success:", res.user.email);
       } else {
         throw new Error("Signup failed.");
       }
@@ -102,12 +99,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // ----------------------------------------------------
   const logout = async () => {
     try {
-      console.log("🚪 Logging out...");
       await AsyncStorage.removeItem("token");
       await AsyncStorage.removeItem("user");
       setUser(null);
       setToken(null);
-      console.log("✅ Logged out successfully");
     } catch (err) {
       console.error("❌ Logout failed:", err);
     }

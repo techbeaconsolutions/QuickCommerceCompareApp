@@ -1,19 +1,18 @@
 // app/(tabs)/profile.tsx
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  Alert,
-  Platform,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import React from "react";
+import {
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { useRouter } from "expo-router";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../src/context/AuthContext";
 
@@ -27,7 +26,6 @@ export default function ProfileScreen() {
 
   // --- DEBUG / DIAGNOSTIC handleLogout ---
   const handleLogout = async () => {
-    console.log("[PROFILE] handleLogout called");
 
     const confirmLogout =
       Platform.OS === "web"
@@ -51,7 +49,6 @@ export default function ProfileScreen() {
 
   // QUICK manual logout - use this to test without Alert
   const forceLogoutNow = async () => {
-    console.log("[PROFILE] forceLogoutNow called (no alert)");
     try {
       if (typeof logout === "function") await logout();
       router.replace("/auth/login");
@@ -164,9 +161,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 24,
     width: "90%",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    boxShadowColor: "#000",
+    boxShadowOpacity: 0.05,
+    boxShadowRadius: 4,
     elevation: 2,
   },
   themeLabel: { fontSize: 16, fontWeight: "600" },

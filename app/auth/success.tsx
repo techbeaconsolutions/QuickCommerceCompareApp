@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, Href } from "expo-router";
+import { Href, useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import { Animated, Easing, Image, StyleSheet, Text } from "react-native";
 
 export default function SuccessScreen() {
   const router = useRouter();
@@ -14,13 +14,13 @@ export default function SuccessScreen() {
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 4,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
         duration: 1000,
         easing: Easing.ease,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start();
 
@@ -78,10 +78,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
+    boxShadowColor: "#000",
+    boxShadowOpacity: 0.2,
+    boxShadowOffset: { width: 0, height: 4 },
+    boxShadowRadius: 8,
     elevation: 10,
   },
   checkmark: {
