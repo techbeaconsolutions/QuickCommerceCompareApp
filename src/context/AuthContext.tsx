@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login as apiLogin, signup as apiSignup } from "../api/scrape"; // 🔹 uses your existing API file
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { login as apiLogin, signup as apiSignup } from "../api/apiClient"; // 🔹 uses your existing API file
 
 // ----------------------------------------------------
 // 🧩 Type Definitions

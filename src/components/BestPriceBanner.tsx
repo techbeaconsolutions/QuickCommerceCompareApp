@@ -7,6 +7,13 @@ import { Ionicons } from "@expo/vector-icons";
 export default function BestPriceBanner({ bestPrice, colors }: any) {
   if (!bestPrice) return null;
 
+    console.log("⭐ BEST PRICE DEBUG →", {
+    image: bestPrice.image,
+    price: bestPrice.price,
+    title: bestPrice.title || bestPrice.name,
+    platform: bestPrice.platform,
+  });
+
   const PLATFORM_LOGO_URLS = {
     Blinkit: "https://assets.grofer.io/app-icon/blinkit.png",
     Zepto: "https://cdn.zeptonow.com/app/zepto-logo.png",
@@ -14,8 +21,15 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
     Flipkart: "https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/flipkart-plus_8d85f4.png",
   };
 
+  const PLATFORM_COLORS = {
+    Blinkit: "#F7D20A",
+    Zepto: "#8E3FFC",
+    Swiggy: "#FC8019",
+    Flipkart: "#2874F0",
+  };
 
   const platformLogo = PLATFORM_LOGO_URLS[bestPrice.platform];
+  const platformColor = PLATFORM_COLORS[bestPrice.platform] || "#333";
 
   return (
     <LinearGradient
@@ -31,7 +45,12 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
           <Image source={{ uri: bestPrice.image }} style={styles.productImage} />
         )}
 
-        {/* Title */}
+        {/* Product Title */}
+        <Text style={[styles.productTitle, { color: colors.text }]}>
+          {bestPrice.title || bestPrice.name}
+        </Text>
+
+        {/* Title Row */}
         <View style={styles.titleRow}>
           <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
           <Text style={[styles.titleText, { color: colors.text }]}>
@@ -39,34 +58,28 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
           </Text>
         </View>
 
-        {/* Price + Platform logo row */}
+        {/* Price + Chip */}
         <View style={styles.priceRow}>
           <Text style={[styles.priceText, { color: colors.primary }]}>
-            ₹{bestPrice.price}
+            {bestPrice.price}
           </Text>
 
           {platformLogo && (
-            <View style={styles.platformChip}>
+            <View
+              style={[
+                styles.platformChip,
+                { backgroundColor: platformColor }
+              ]}
+            >
               <Image
                 source={{ uri: platformLogo }}
                 style={styles.platformLogo}
               />
-              <Text style={styles.platformText}>{bestPrice.platform}</Text>
+              <Text style={styles.platformChipText}>
+                {bestPrice.platform}
+              </Text>
             </View>
           )}
-        </View>
-
-        {/* Savings */}
-        <View
-          style={[
-            styles.savingsContainer,
-            { backgroundColor: colors.background },
-          ]}
-        >
-          <Ionicons name="trending-down" size={16} color="#0CC6E9" />
-          <Text style={[styles.savingsText, { color: colors.text }]}>
-            Save ₹{bestPrice.differenceFromHighest} compared to highest price
-          </Text>
         </View>
       </View>
     </LinearGradient>
@@ -92,6 +105,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     resizeMode: "contain",
     marginBottom: 12,
+  },
+
+  productTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 6,
   },
 
   titleRow: {
@@ -120,7 +140,6 @@ const styles = StyleSheet.create({
   platformChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eef7ff",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -134,24 +153,10 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  platformText: {
+  platformChipText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#007aff",
-  },
-
-  savingsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 12,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-
-  savingsText: {
-    marginLeft: 6,
-    fontSize: 13,
-    fontWeight: "600",
+    color: "#fff",
   },
 });
+

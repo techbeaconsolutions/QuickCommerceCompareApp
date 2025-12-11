@@ -1,9 +1,10 @@
-// Home.tsx — Part 1 of 3
+// app/(tabs)/home.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
   Linking,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,10 +25,8 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { useTheme } from "../../context/ThemeContext";
-import { scrapePlatform } from "../../src/api/scrape";
+import api from "../../src/api/apiClient";
 import BestPriceBanner from "../../src/components/BestPriceBanner";
-import { useNavigation } from "@react-navigation/native";
-import { useRouter } from "expo-router";
 
 /** Product Type */
 type Product = {
@@ -36,6 +36,7 @@ type Product = {
   image?: string;
   pincode?: string;
   quantity?: string;
+  url?: string;
   [k: string]: any;
 };
 
@@ -55,9 +56,13 @@ export default function HomeScreen() {
   const [isManualLocation, setIsManualLocation] = useState<boolean>(false);
   const [bestPrice, setBestPrice] = useState<any>(null);
   const [compareTable, setCompareTable] = useState<any[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // NEW: jobId state for background job
+  const [jobId, setJobId] = useState<string | null>(null);
 
   const openProductModal = (item: Product) => {
     setSelectedProduct(item);
@@ -163,23 +168,23 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const handleOrderNow = (item) => {
-    const product = encodeURIComponent(item.name);
+  const handleOrderNow = (item: Product) => {
+    const productEnc = encodeURIComponent(item.name || "");
     let url = "";
 
     if (item.platform === "Blinkit") {
-      url = item.url || `https://blinkit.com/s/?q=${product}&pincode=${pincode}`;
+      url = item.url || `https://blinkit.com/s/?q=${productEnc}&pincode=${pincode}`;
     } else if (item.platform === "Zepto") {
-      url = `https://www.zeptonow.com/search?q=${product}`;
+      url = item.url || `https://www.zeptonow.com/search?q=${productEnc}`;
     } else if (item.platform === "Instamart" || item.platform === "Swiggy") {
-      url = `https://www.swiggy.com/instamart/search?q=${product}`;
+      url = item.url || `https://www.swiggy.com/instamart/search?q=${productEnc}`;
     } else {
       return;
     }
 
     // 🎯 Web needs window.open
     if (Platform.OS === "web") {
-      window.open(url, "_blank"); // <-- FIXED
+      window.open(url, "_blank");
       return;
     }
 
@@ -207,24 +212,21 @@ export default function HomeScreen() {
   /** Price extractor */
   const extractPrice = (text: string): string => {
     if (!text) return "N/A";
-    const match = String(text).match(/₹\s*\d+/);
+    const match = String(text).match(/₹\s*\d+(\.\d+)?/);
     return match ? match[0] : "N/A";
   };
-
 
   /** Safely normalize all price formats */
   const normalizePrice = (p: any): string => {
     if (p === null || typeof p === "undefined") return "N/A";
 
-    // p might be like: "12 MINS\n... \n₹29\nADD" or "₹29" or number 29
     if (typeof p === "string") {
       if (p.includes("₹")) {
         return extractPrice(p);
       }
-      // maybe pure numeric string
       const num = p.trim();
       if (/^\d+(\.\d+)?$/.test(num)) return `₹${num}`;
-      return p; // fallback
+      return p;
     }
 
     if (typeof p === "number") return `₹${p}`;
@@ -256,20 +258,8 @@ export default function HomeScreen() {
         }
       }
 
-      // 🌐 WEB MODE
       if (Platform.OS === "web") {
         try {
-          console.log("🌐 Getting web location…");
-
-          const coords: any = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => resolve(pos.coords),
-              (err) => reject(err),
-              { enableHighAccuracy: true }
-            );
-          });
-
-          // 📌 Reverse geocode using India Govt API (NO KEY REQUIRED)
           const ipRes = await fetch("https://ipapi.co/json/");
           const ipData = await ipRes.json();
 
@@ -277,7 +267,7 @@ export default function HomeScreen() {
           const city = ipData.city || "Unknown City";
           const area = ipData.region || "Unknown Area";
 
-          if (!pincode) throw new Error("No pin from govt API");
+          if (!pincode) throw new Error("No pin from api");
 
           const newLoc = { city, area, pincode };
           setLocationInfo(newLoc);
@@ -287,7 +277,6 @@ export default function HomeScreen() {
 
           return pincode;
         } catch (err) {
-          console.log("❌ Web Location Error:", err);
           Toast.show({
             type: "error",
             text1: "Location Error",
@@ -298,7 +287,6 @@ export default function HomeScreen() {
         }
       }
 
-      // 📱 ANDROID / iOS
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") return null;
 
@@ -326,19 +314,15 @@ export default function HomeScreen() {
 
       return newLocation.pincode;
     } catch (err) {
-      console.log("📍 Final location error:", err);
       return null;
     }
   };
-
-
 
   /** Sparkles (animated) setup - using refs array so we DON'T call hooks in render loop */
   const STAR_COUNT = 6;
   const floatAnimsRef = useRef<Animated.Value[]>([]);
   const spinAnimsRef = useRef<Animated.Value[]>([]);
 
-  // create refs only once
   if (floatAnimsRef.current.length === 0) {
     floatAnimsRef.current = Array.from({ length: STAR_COUNT }, () => new Animated.Value(0));
   }
@@ -346,7 +330,6 @@ export default function HomeScreen() {
     spinAnimsRef.current = Array.from({ length: STAR_COUNT }, () => new Animated.Value(0));
   }
 
-  // positions and size for stars (memoized)
   const starLayout = useMemo(() => {
     return Array.from({ length: STAR_COUNT }).map((_, i) => ({
       size: 16 + (i % 3) * 6,
@@ -356,10 +339,7 @@ export default function HomeScreen() {
     }));
   }, []);
 
-
-  // Home.tsx — Part 2 of 3
   useEffect(() => {
-    // start animations for each star
     floatAnimsRef.current.forEach((anim, i) => {
       const loopFloat = Animated.loop(
         Animated.sequence([
@@ -382,10 +362,146 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // Polling refs (numbers in browser/react-native-web)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messageIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // helper to clear poll
+  const clearPollInterval = () => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current as unknown as number);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const clearMessageInterval = () => {
+    if (messageIntervalRef.current !== null) {
+      clearInterval(messageIntervalRef.current as unknown as number);
+      messageIntervalRef.current = null;
+    }
+  };
+
+  const startPolling = (jobIdParam: string) => {
+    clearPollInterval();
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const status = await api.checkScrapeStatus(jobIdParam);
+        setStep((prev) => (prev + 1) % messages.length);
+
+        const state = status?.state ?? status?.status ?? "unknown";
+
+        if (state === "completed") {
+          clearPollInterval();
+          clearMessageInterval();
+
+          const raw = status.result ?? status.raw ?? status.rawResult ?? status.rawData ?? status;
+
+          const lowest =
+            status.lowestPriceProduct ??
+            raw?.lowestPriceProduct ??
+            null;
+
+          // Normalizer
+          const normalize = (item: any) => ({
+            name: item?.name || item?.title || "",
+            image: item?.image || item?.img || "",
+            price: item?.price ?? item?.finalPrice ?? item?.displayPrice ?? "",
+            quantity: item?.quantity ?? item?.qty ?? "",
+            platform: item?.platform ? normalizePlatform(item.platform) : item?.platform ?? "",
+            url: item?.url,
+            pincode: item?.pincode,
+          });
+
+          // FIX: read sortedResults instead of sorted
+          const sortedFromBackend =
+            status.sortedResults ??
+            raw?.sortedResults ??
+            status.sorted ??
+            raw?.sorted ??
+            null;
+
+          if (Array.isArray(sortedFromBackend) && sortedFromBackend.length > 0) {
+            setResults(sortedFromBackend.map(normalize));
+          } else {
+            const aggregated = [
+              ...(raw?.blinkit ?? []),
+              ...(raw?.zepto ?? []),
+              ...(raw?.swiggy ?? []),
+            ].map(normalize);
+
+            setResults(aggregated);
+          }
+
+
+          /** ----------------------------
+           * ⭐ Compute Best Price Banner
+           * ---------------------------- */
+          if (lowest) {
+            const normalizeNum = (val: any) =>
+              parseFloat(String(val).replace("₹", "").trim()) || 0;
+
+            // lowest numeric price
+            const lowestPriceNum = normalizeNum(lowest.price);
+
+            // find highest in backend sorted prices
+            const sortedList = status.sorted ?? [];
+            const highestItem =
+              sortedList.length > 0 ? sortedList[sortedList.length - 1] : null;
+
+            const highestPriceNum = highestItem
+              ? normalizeNum(highestItem.price)
+              : lowestPriceNum;
+
+            const difference = Math.max(0, highestPriceNum - lowestPriceNum);
+
+            setBestPrice({
+              name: lowest?.name || "",
+              price: `₹${lowestPriceNum}`,    // ⭐ ALWAYS STRING WITH ₹
+              image: lowest?.image,
+              platform: normalizePlatform(lowest?.platform),
+              quantity: lowest?.quantity,
+              differenceFromHighest: difference, // ⭐ REQUIRED FIELD
+            });
+          } else {
+            setBestPrice(null);
+          }
+
+          setLoading(false);
+          setSuccess(true);
+
+          Toast.show({ type: "success", text1: "Scraping Completed!" });
+
+          // ⭐ After showing "Done" for 1 second:
+          setTimeout(() => {
+            setProduct("");    // Clear search input
+            setSuccess(false); // Reset button back to "Compare"
+          }, 1000);
+
+          return;
+
+        }
+
+        if (state === "failed") {
+          clearPollInterval();
+          clearMessageInterval();
+          setLoading(false);
+          Toast.show({ type: "error", text1: "Scraping Failed" });
+          return;
+        }
+
+        // still running...
+
+      } catch (err) {
+        console.warn("Polling error:", err);
+      }
+    }, 2000);
+  };
+
 
   const handleCompare = async (selectedProduct?: string) => {
+    if (loading) return;
 
-    // 🔐 Step 1 - Check Login
     const token = await AsyncStorage.getItem("token");
     if (!token) {
       Toast.show({
@@ -398,7 +514,6 @@ export default function HomeScreen() {
       return;
     }
 
-    // 🔍 Step 2 - Validate input
     const searchProduct = (selectedProduct || product || "").trim();
     const searchPincode = (pincode || "").trim();
 
@@ -412,135 +527,62 @@ export default function HomeScreen() {
       return;
     }
 
-    // Reset UI
-    setProduct(searchProduct);
+    // UI reset
     setLoading(true);
+    setProduct(searchProduct);
     setResults([]);
     setBestPrice(null);
     setCompareTable([]);
     setStep(0);
+    setSuccess(false);
 
-    let stepIndex = 0;
-    const messageInterval = setInterval(() => {
-      stepIndex = (stepIndex + 1) % messages.length;
-      setStep(stepIndex);
+    // start cycling messages
+    if (messageIntervalRef.current !== null) {
+      clearMessageInterval();
+    }
+    messageIntervalRef.current = setInterval(() => {
+      setStep((prev) => (prev + 1) % messages.length);
     }, 2000);
 
     try {
-      // 🔥 API CALL
-      const response = await scrapePlatform("all", searchPincode, searchProduct);
-      const payload = response?.data ?? response ?? {};
+      // start job
+      const startResp = await api.startScrape(searchPincode, searchProduct);
+      const newJobId = startResp?.jobId ?? startResp?.id ?? null;
 
-      const raw = payload.rawData ?? payload.raw ?? payload ?? {};
-      const best = payload.bestPrice ?? payload.best_price ?? null;
-      const table = payload.comparisonTable ?? payload.comparison_table ?? [];
-
-      /** ✅ Map Product Once — for ALL platforms */
-      const mapProduct = (item: any): Product => ({
-        name: item.name || item.title || "Unnamed",
-        image: item.image || item.img || "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
-        price: normalizePrice(item.price),
-        quantity: item.quantity || item.qty || "",
-        platform: normalizePlatform(item.platform),
-        url: item.url || "",
-        pincode: item.pincode || "",
-      });
-
-      /** ✅ Always map BEFORE grouping */
-      const allData = [
-        ...(raw.blinkit ?? []).map(mapProduct),
-        ...(raw.zepto ?? []).map(mapProduct),
-        ...(raw.swiggy ?? []).map(mapProduct),
-        ...(raw.flipkart ?? []).map(mapProduct),
-      ];
-
-      // ------------------------------
-      // 🧠 GROUPING LOGIC
-      // ------------------------------
-
-      const simplify = (str: string = "") =>
-        str.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
-
-      const extractBrand = (name = "") => simplify(name).split(" ")[0];
-
-      const extractCategory = (name = "") => {
-        const t = simplify(name);
-        if (t.includes("milk")) return "milk";
-        if (t.includes("curd")) return "curd";
-        if (t.includes("paneer")) return "paneer";
-        if (t.includes("butter")) return "butter";
-        return "other";
-      };
-
-      const fuzzy = (a = "", b = "") => {
-        a = simplify(a);
-        b = simplify(b);
-        return (
-          a.includes(b) ||
-          b.includes(a) ||
-          a.startsWith(b) ||
-          b.startsWith(a)
-        );
-      };
-
-      const finalGroups: Record<string, Product[]> = {};
-
-      for (const prod of allData) {
-        const brand = extractBrand(prod.name);
-        const cat = extractCategory(prod.name);
-        const baseKey = `${brand}_${cat}`;
-
-        let useKey = baseKey;
-
-        for (const key in finalGroups) {
-          if (fuzzy(finalGroups[key][0]?.name ?? "", prod.name ?? "")) {
-            useKey = key;
-            break;
-          }
-        }
-
-        (finalGroups[useKey] ??= []).push(prod);
+      if (!newJobId) {
+        throw new Error("No jobId returned from server");
       }
 
-      const matched: Product[] = [];
-      const unmatched: Product[] = [];
-
-      Object.values(finalGroups).forEach((group) => {
-        const platforms = new Set(group.map((g) => g.platform));
-        if (platforms.size >= 2) matched.push(...group);
-        else unmatched.push(...group);
-      });
-
-      // FINAL RESULT
-      const finalList = [...matched, ...unmatched];
-
-      setResults(finalList);
-      setBestPrice(best);
-      setCompareTable(table);
-
-      Toast.show({
-        type: "success",
-        text1: "Success!",
-        text2: `Prices loaded for "${searchProduct}"`,
-        position: "top",
-      });
-
+      setJobId(newJobId);
+      startPolling(newJobId);
     } catch (err) {
       console.error("COMPARE ERROR:", err);
       Toast.show({
         type: "error",
         text1: "Error",
-        text2: "Failed to fetch comparison data.",
+        text2: "Failed to start scraping.",
         position: "top",
       });
-    } finally {
-      clearInterval(messageInterval);
       setLoading(false);
+      clearMessageInterval();
+    } finally {
+      // if job didn't start, clear message interval after short timeout
+      setTimeout(() => {
+        if (!jobId && messageIntervalRef.current !== null) {
+          clearMessageInterval();
+        }
+      }, 3000);
     }
   };
 
-
-
+  // cleanup intervals when component unmounts
+  useEffect(() => {
+    return () => {
+      clearPollInterval();
+      clearMessageInterval();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -576,27 +618,12 @@ export default function HomeScreen() {
 
   const platformLogos: any = {
     Blinkit: require("../../assets/images/blinkit.png"),
-    // Zepto: require("../../assets/images/zepto.png"),
-    // Swiggy: require("../../assets/images/swiggy.png"),
-    // Flipkart: require("../../assets/images/flipkart.png"),
   };
 
-  // Home.tsx — Part 3 of 3
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* 🌈 Floating Gradient Stars (safe - no hooks in map) */}
       <View style={{ ...styles.starContainer, pointerEvents: "none" }}>
         {starLayout.map((s, i) => {
-          const translateY = floatAnimsRef.current[i].interpolate({
-            inputRange: [-15, 10],
-            outputRange: [-15, 10],
-          });
-
-          const rotate = spinAnimsRef.current[i].interpolate({
-            inputRange: [0, 1],
-            outputRange: ["0deg", "360deg"],
-          });
-
           return (
             <React.Fragment key={i}>
               <Animated.View
@@ -606,7 +633,8 @@ export default function HomeScreen() {
                 ]}
               >
                 <Ionicons name="sparkles" size={32} color={colors.primary} style={{ opacity: 0.2 }} />
-              </Animated.View><Animated.View
+              </Animated.View>
+              <Animated.View
                 style={[
                   styles.sparkle,
                   { top: 120, right: 60, transform: [{ translateY: floatAnim2 }] },
@@ -616,17 +644,15 @@ export default function HomeScreen() {
                   name="sparkles-outline"
                   size={36}
                   color={colors.primary}
-                  style={{ opacity: 0.25 }} />
+                  style={{ opacity: 0.25 }}
+                />
               </Animated.View>
             </React.Fragment>
-
           );
         })}
       </View>
 
-      {/* Main Scroll */}
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.heading, { color: colors.text }]}>
             Compare <Text style={{ color: "#0CC6E9" }}>Prices.</Text>
@@ -635,7 +661,6 @@ export default function HomeScreen() {
           <Text style={[styles.desc, { color: colors.secondaryText }]}>Real-time price comparison across all major platforms</Text>
         </View>
 
-        {/* Location Banner */}
         <TouchableOpacity activeOpacity={0.8} onPress={() => setLocationModalVisible(true)} style={[styles.locationBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="location" size={18} color={colors.primary} style={{ marginRight: 8 }} />
           <View style={{ flex: 1 }}>
@@ -663,13 +688,16 @@ export default function HomeScreen() {
           <Ionicons name="chevron-down" size={18} color={colors.secondaryText} />
         </TouchableOpacity>
 
-        {/* Search Input */}
         <View style={[styles.inputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <Ionicons name="search" size={20} color={colors.secondaryText} style={styles.icon} />
-          <TextInput placeholder="Search for product" placeholderTextColor={colors.secondaryText} value={product} onChangeText={setProduct} style={[styles.input, { color: colors.text }]} />
+          <TextInput placeholder="Search for product" placeholderTextColor={colors.secondaryText} value={product} onChangeText={(text) => {
+            setProduct(text);
+
+            // ⭐ Reset button state if user edits search after scrape
+            if (success) setSuccess(false);
+          }} style={[styles.input, { color: colors.text }]} />
         </View>
 
-        {/* Compare Button */}
         <TouchableOpacity onPress={() => handleCompare()} activeOpacity={0.8} disabled={loading || success}>
           <View style={[styles.buttonWrapper, loading && { opacity: 0.8 }]}>
             <LinearGradient colors={loading ? [colors.border, colors.border] : [colors.primary, "#0cc6e9"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.button}>
@@ -696,7 +724,6 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Categories */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Popular Categories</Text>
         <View style={styles.grid}>
           {categories.map((cat, i) => (
@@ -705,11 +732,13 @@ export default function HomeScreen() {
               activeOpacity={0.8}
               style={[styles.catCard, { backgroundColor: colors.card }]}
               onPress={async () => {
+                if (loading) return;
+
                 let detectedPin = await getCurrentLocation(false);
                 if (!detectedPin) detectedPin = await getCurrentLocation(true);
                 if (!detectedPin) return;
-                handleCompare(cat.name);   // <- pass category directly
 
+                handleCompare(cat.name);
               }}
             >
               <Text style={styles.catIcon}>{cat.icon}</Text>
@@ -718,12 +747,9 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Results */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
 
         {bestPrice && <BestPriceBanner bestPrice={bestPrice} colors={colors} />}
-
-        {/* {compareTable.length > 0 && <ComparisonTable table={compareTable} colors={colors} />} */}
 
         {loading && (
           <View style={{ alignItems: "center", marginVertical: 30 }}>
@@ -735,15 +761,7 @@ export default function HomeScreen() {
         {!loading && results.length === 0 && (
           <Text style={{ textAlign: "center", color: colors.secondaryText, marginVertical: 50 }}>No results found. Try searching a product.</Text>
         )}
-
-        {/* DEBUG: show raw results JSON to verify data arrives to UI */}
-        {/* {!loading && results.length > 0 && (
-          <View style={{ padding: 12 }}>
-            <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 8 }}>Debug — results JSON (first 10)</Text>
-            <Text style={{ color: colors.secondaryText, fontSize: 12 }}>{JSON.stringify(results.slice(0, 10), null, 2)}</Text>
-          </View>
-        )} */}
-
+        <br />
         {!loading && results.length > 0 && (
           <FlatList
             data={results}
@@ -751,59 +769,77 @@ export default function HomeScreen() {
             numColumns={2}
             columnWrapperStyle={{ justifyContent: "space-between" }}
             scrollEnabled={false}
-            renderItem={({ item }) => (
-              <View
-                onStartShouldSetResponder={() => {
-                  openProductModal(item);
-                  return true;
-                }}
-                style={[
-                  styles.cardBox,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    cursor: "pointer", // works only on web
-                  },
-                ]}
-              >
-                <Image
-                  source={{
-                    uri: item.image || "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
-                  }}
-                  style={styles.cardImage}
-                />
+            renderItem={({ item }) => {
+              const Card = () => {
+                const [hovered, setHovered] = useState(false);
 
-                <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
-                  {item.name || "Unnamed"}
-                </Text>
+                return (
+                  <Pressable
+                    onPress={() => openProductModal(item)}
+                    onHoverIn={() => Platform.OS === "web" && setHovered(true)}
+                    onHoverOut={() => Platform.OS === "web" && setHovered(false)}
+                    style={[
+                      styles.cardBox,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: hovered ? colors.primary : colors.border,
+                        transform: [{ scale: hovered ? 1.03 : 1 }],
+                        ...(Platform.OS === "web"
+                          ? {
+                            cursor: "pointer",
+                            transition: "all 0.2s ease-in-out",
+                            boxShadow: hovered
+                              ? "0px 6px 18px rgba(0,0,0,0.15)"
+                              : "0px 2px 8px rgba(0,0,0,0.06)",
+                          }
+                          : {}),
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={{
+                        uri:
+                          item.image ||
+                          "https://cdn-icons-png.flaticon.com/512/7185/7185640.png",
+                      }}
+                      style={styles.cardImage}
+                    />
 
-                <Text style={[styles.cardPrice, { color: colors.primary }]}>
-                  {item.price}
-                </Text>
+                    <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.text }]}>
+                      {item.name || "Unnamed"}
+                    </Text>
 
-                <View
-                  style={{
-                    alignSelf: "flex-start",
-                    backgroundColor: platformColors[item.platform || ""] || "#ccc",
-                    borderRadius: 20,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    marginTop: 8,
-                  }}
-                >
-                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
-                    {item.platform}
-                  </Text>
-                </View>
-              </View>
-            )}
+                    <Text style={[styles.cardPrice, { color: colors.primary }]}>
+                      {item.price}
+                    </Text>
+
+                    <View
+                      style={{
+                        alignSelf: "flex-start",
+                        backgroundColor: platformColors[item.platform || ""] || "#ccc",
+                        borderRadius: 20,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        marginTop: 8,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 12, fontWeight: "700" }}>
+                        {item.platform}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              };
+
+              return <Card />;
+            }}
+
 
 
           />
         )}
       </ScrollView>
 
-      {/* Popup Modal */}
       {locationModalVisible && (
         <View style={styles.popupBackdrop}>
           <View style={[styles.popupContainer, { backgroundColor: colors.card }]}>
@@ -850,7 +886,6 @@ export default function HomeScreen() {
         animationType="none"
         onRequestClose={closeProductModal}
       >
-        {/* BLUR OVERLAY */}
         <View style={styles.modalOverlay}>
           <Animated.View
             style={[
@@ -863,12 +898,10 @@ export default function HomeScreen() {
               },
             ]}
           >
-            {/* CLOSE BUTTON */}
             <TouchableOpacity style={styles.closeBtn} onPress={closeProductModal}>
               <Ionicons name="close" size={26} color={colors.text} />
             </TouchableOpacity>
 
-            {/* PLATFORM LOGO */}
             {selectedProduct?.platform && (
               <Image
                 source={platformLogos[selectedProduct.platform]}
@@ -876,41 +909,32 @@ export default function HomeScreen() {
               />
             )}
 
-            {/* PRODUCT IMAGE */}
             <Image
               source={{ uri: selectedProduct?.image }}
               style={styles.modalImage}
             />
 
-            {/* TITLE */}
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {selectedProduct?.name}
             </Text>
 
-            {/* PRICE */}
             <Text style={[styles.modalPrice, { color: colors.primary }]}>
               {selectedProduct?.price}
             </Text>
 
-            {/* QUANTITY */}
             <Text style={[styles.modalQty, { color: colors.secondaryText }]}>
               {selectedProduct?.quantity || "Unknown quantity"}
             </Text>
 
-            {/* ORDER NOW */}
             <TouchableOpacity
               style={styles.orderBtn}
-              onPress={() => handleOrderNow(selectedProduct)}
+              onPress={() => handleOrderNow(selectedProduct!)}
             >
               <Text style={styles.orderBtnText}>Order Now</Text>
             </TouchableOpacity>
-
-
           </Animated.View>
         </View>
       </Modal>
-
-
     </View>
   );
 }
@@ -963,13 +987,31 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.2,
     width: "48%",
-    marginBottom: 10,
-    padding: 10,
-    elevation: 3,
+    marginBottom: 16,
+    padding: 12,
+    elevation: 2,
+    backgroundColor: "#fff",
   },
-  cardImage: { width: "100%", height: 100, borderRadius: 10, resizeMode: "contain" },
-  cardTitle: { fontSize: 14, fontWeight: "600", marginTop: 8 },
-  cardPrice: { fontSize: 16, fontWeight: "700", marginTop: 4 },
+
+  cardImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 10,
+    resizeMode: "contain",
+    backgroundColor: "#fafafa",
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginTop: 10,
+    lineHeight: 18,
+    height: 40,   // consistent spacing
+  },
+  cardPrice: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 8,
+  },
   popupBackdrop: {
     position: "absolute",
     top: 0,
@@ -986,14 +1028,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     alignItems: "stretch",
-
-    // Android shadow
     elevation: 10,
-
-    // New universal shadow (iOS + Web + future RN versions)
     boxShadow: "0px 4px 6px rgba(0,0,0,0.3)",
   },
-
   modalOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -1019,7 +1056,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-
   modalBox: {
     width: "88%",
     borderRadius: 22,
@@ -1032,21 +1068,18 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
   },
-
   closeBtn: {
     position: "absolute",
     right: 10,
     top: 10,
     zIndex: 10,
   },
-
   platformLogo: {
     width: 55,
     height: 55,
     resizeMode: "contain",
     marginBottom: 10,
   },
-
   modalImage: {
     width: 150,
     height: 150,
@@ -1054,26 +1087,22 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     marginBottom: 10,
   },
-
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 8,
   },
-
   modalPrice: {
     fontSize: 22,
     fontWeight: "800",
     marginBottom: 5,
   },
-
   modalQty: {
     fontSize: 14,
     opacity: 0.7,
     marginBottom: 20,
   },
-
   orderBtn: {
     width: "100%",
     paddingVertical: 14,
@@ -1081,13 +1110,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-
   orderBtnText: {
     color: "#1e9c31ff",
     fontSize: 16,
     fontWeight: "700",
   },
-
-
-
 });
