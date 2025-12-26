@@ -1,187 +1,177 @@
-import React, { useRef, useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, Href } from "expo-router";
 
-export default function OTPScreen() {
-  const router = useRouter();
-  const [otp, setOtp] = useState(["", "", "", ""]);
-  const [timer, setTimer] = useState(30);
-  const inputs = useRef<TextInput[]>([]);
+  import React, { useEffect, useState } from "react";
+  import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+  } from "react-native";
+  import { useLocalSearchParams, useRouter } from "expo-router";
+  import Toast from "react-native-toast-message";
+import { apiClient } from "../../src/api/apiClient";
 
-  useEffect(() => {
-    if (timer > 0) {
-      const countdown = setTimeout(() => setTimer(timer - 1), 1000);
-      return () => clearTimeout(countdown);
+  export default function OtpScreen() {
+    const { email } = useLocalSearchParams<{ email: string }>();
+    const router = useRouter();
+
+    const [otp, setOtp] = useState("");
+    const [timer, setTimer] = useState(30);
+    const [resending, setResending] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+
+    // ⏱ Countdown
+    useEffect(() => {
+      if (timer === 0) return;
+      const interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }, [timer]);
+
+    useEffect(() => {
+      if (!email) {
+        Toast.show({
+          type: "error",
+          text1: "Invalid session",
+          text2: "Please restart password reset",
+        });
+        router.replace("/auth/forgot-password");
+      }
+    }, [email]);
+
+const verifyOtp = async () => {
+  const cleanOtp = otp.replace(/\s/g, "");
+
+  // 🔍 DEBUG LOGS
+  console.log("📩 Email:", email);
+  console.log("🔢 Raw OTP:", otp);
+  console.log("🧹 Clean OTP:", cleanOtp);
+  console.log("📏 OTP Length:", cleanOtp.length);
+
+  if (cleanOtp.length !== 6) {
+    console.log("❌ OTP length invalid");
+    Toast.show({ type: "error", text1: "Invalid OTP" });
+    return;
+  }
+
+  try {
+    setVerifying(true);
+    console.log("🚀 Sending verify-otp request...");
+
+    const res = await apiClient.post("/auth/verify-otp", {
+      email,
+      otp: cleanOtp,
+    });
+
+    console.log("✅ Verify OTP response:", res.data);
+
+    if (res.data?.success) {
+      console.log("🔑 Reset token received:", res.data.resetToken);
+
+      router.replace({
+        pathname: "/auth/reset-password",
+        params: {
+          resetToken: res.data.resetToken,
+        },
+      });
     }
-  }, [timer]);
+  } catch (err: any) {
+    console.log("❌ Verify OTP error:", err.response?.data || err.message);
 
-  const handleChange = (text: string, index: number) => {
-    if (text.length > 1) return; // allow only one digit
-    const newOtp = [...otp];
-    newOtp[index] = text;
-    setOtp(newOtp);
+    Toast.show({
+      type: "error",
+      text1: err.response?.data?.message || "Invalid OTP",
+    });
+  } finally {
+    setVerifying(false);
+    console.log("⏹️ Verify OTP finished");
+  }
+};
 
-    if (text && index < 3) {
-      inputs.current[index + 1].focus(); // move to next input
-    }
-  };
 
-  const handleVerify = () => {
-    if (otp.join("").length < 4) {
-      alert("Please enter all 4 digits of the OTP");
-      return;
-    }
-    router.replace("/auth/reset-password" as Href); // ✅ next step (reset password)
-  };
 
-  const handleResend = () => {
-    setTimer(30);
-    alert("A new OTP has been sent to your email!");
-  };
 
-  return (
-    <LinearGradient
-      colors={["#0871da", "#0cc6e9"]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.innerContainer}
-      >
-        {/* Header */}
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ marginBottom: 20 }}
-        >
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+    const resendOtp = async () => {
+      if (timer > 0) return;
 
-        {/* Title */}
+      try {
+        setResending(true);
+        await apiClient.post("/auth/forgot-password", { email });
+
+        Toast.show({
+          type: "success",
+          text1: "OTP resent",
+        });
+        setOtp("");
+        setTimer(30);
+      } catch {
+        Toast.show({
+          type: "error",
+          text1: "Failed to resend OTP",
+        });
+      } finally {
+        setResending(false);
+      }
+    };
+
+    return (
+      <View style={styles.container}>
         <Text style={styles.title}>Enter OTP</Text>
-        <Text style={styles.subtitle}>
-          We've sent a 4-digit code to your registered email.
-        </Text>
+        <Text style={styles.subtitle}>Sent to {email}</Text>
 
-        {/* OTP Input Boxes */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                if (ref) inputs.current[index] = ref;
-              }}
-              style={styles.otpBox}
-              keyboardType="numeric"
-              maxLength={1}
-              value={digit}
-              onChangeText={(text) => handleChange(text, index)}
-              returnKeyType="next"
-            />
-          ))}
-        </View>
+        <TextInput
+          style={styles.otpInput}
+          keyboardType="number-pad"
+          maxLength={6}
+          value={otp}
+          onChangeText={setOtp}
+          placeholder="••••••"
+        />
 
-        {/* Verify Button */}
-        <TouchableOpacity onPress={handleVerify} style={styles.verifyButton}>
-          <LinearGradient
-            colors={["#fff", "#e0f7ff"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.verifyGradient}
-          >
-            <Text style={styles.verifyText}>Verify OTP</Text>
-          </LinearGradient>
+        <TouchableOpacity onPress={verifyOtp} style={styles.verifyBtn} disabled={verifying}>
+          <Text style={styles.btnText}>Verify OTP</Text>
         </TouchableOpacity>
 
-        {/* Resend Timer */}
-        <View style={styles.resendContainer}>
-          {timer > 0 ? (
-            <Text style={styles.timerText}>Resend OTP in {timer}s</Text>
-          ) : (
-            <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendText}>Resend OTP</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
-  );
-}
+        <TouchableOpacity
+          onPress={resendOtp}
+          disabled={timer > 0 || resending}
+        >
+          <Text style={styles.resendText}>
+            {timer > 0 ? `Resend OTP in ${timer}s` : "Resend OTP"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  innerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  backText: {
-    color: "#fff",
-    fontSize: 15,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#E1F5FE",
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginHorizontal: 20,
-    marginBottom: 40,
-  },
-  otpBox: {
-    width: 55,
-    height: 55,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    color: "#fff",
-    fontSize: 22,
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  verifyButton: {
-    alignItems: "center",
-  },
-  verifyGradient: {
-    borderRadius: 30,
-    paddingVertical: 14,
-    paddingHorizontal: 80,
-  },
-  verifyText: {
-    color: "#0871da",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  resendContainer: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  timerText: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  resendText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-});
+  const styles = StyleSheet.create({
+    container: { flex: 1, justifyContent: "center", padding: 24 },
+    title: { fontSize: 24, fontWeight: "800", marginBottom: 6 },
+    subtitle: { marginBottom: 20, color: "#666" },
+    otpInput: {
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 18,
+      textAlign: "center",
+      letterSpacing: 8,
+      marginBottom: 20,
+    },
+    verifyBtn: {
+      backgroundColor: "#0871da",
+      padding: 14,
+      borderRadius: 30,
+    },
+    btnText: {
+      color: "#fff",
+      textAlign: "center",
+      fontWeight: "700",
+    },
+    resendText: {
+      marginTop: 20,
+      textAlign: "center",
+      color: "#0871da",
+      fontWeight: "600",
+    },
+  });

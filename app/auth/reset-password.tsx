@@ -1,158 +1,145 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter, Href } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
+import { Ionicons } from "@expo/vector-icons";
+import apiClient from "../../src/api/apiClient";
 
 export default function ResetPassword() {
-  const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+const params = useLocalSearchParams();
+const rawToken = params.resetToken;
 
-  const handleSavePassword = () => {
-    if (!password || !confirmPassword) {
-      alert("Please fill in all fields");
+const resetToken =
+  Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  const router = useRouter();
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // 🔒 Guard invalid access
+  useEffect(() => {
+    if (!resetToken) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid session",
+        text2: "Please restart password reset",
+      });
+      router.replace("/auth/forgot-password");
+    }
+  }, [resetToken]);
+
+  const resetPassword = async () => {
+    if (loading) return;
+
+    if (password.length < 6) {
+      Toast.show({
+        type: "error",
+        text1: "Weak password",
+        text2: "Minimum 6 characters required",
+      });
       return;
     }
-    if (password !== confirmPassword) {
-      alert("Passwords do not match");
+
+    if (password !== confirm) {
+      Toast.show({
+        type: "error",
+        text1: "Passwords do not match",
+      });
       return;
     }
-    alert("✅ Password reset successful!");
-    router.replace("/auth/login" as Href);
+
+    try {
+      setLoading(true);
+
+      const res = await apiClient.post("/auth/reset-password", {
+        resetToken,
+        password: password.trim(), // ✅ correct key
+      });
+
+      Toast.show({
+        type: "success",
+        text1: "Password reset successful 🎉",
+      });
+
+      router.replace("/auth/login");
+    } catch (err: any) {
+      Toast.show({
+        type: "error",
+        text1: "Reset failed",
+        text2: err?.response?.data?.message || "Try again",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+
   return (
-    <LinearGradient
-      colors={["#0871da", "#0cc6e9"]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.innerContainer}
+    <View style={styles.container}>
+      <Text style={styles.title}>Reset Password</Text>
+
+      <View style={styles.inputWrap}>
+        <TextInput
+          secureTextEntry={!show}
+          placeholder="New password"
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity onPress={() => setShow(!show)}>
+          <Ionicons
+            name={show ? "eye-off-outline" : "eye-outline"}
+            size={22}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <TextInput
+        secureTextEntry={!show}
+        placeholder="Confirm password"
+        style={styles.input}
+        value={confirm}
+        onChangeText={setConfirm}
+      />
+
+      <TouchableOpacity
+        onPress={resetPassword}
+        style={[styles.btn, loading && { opacity: 0.6 }]}
+        disabled={loading}
       >
-        {/* Header */}
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ marginBottom: 20 }}
-        >
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>
-          Create a strong new password to secure your account.
+        <Text style={styles.btnText}>
+          {loading ? "Resetting..." : "Reset Password"}
         </Text>
-
-        {/* New Password */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>New Password</Text>
-          <TextInput
-            placeholder="Enter new password"
-            placeholderTextColor="#B3E5FC"
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-
-        {/* Confirm Password */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            placeholder="Re-enter password"
-            placeholderTextColor="#B3E5FC"
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-        </View>
-
-        {/* Save & Continue Button */}
-        <TouchableOpacity
-          onPress={handleSavePassword}
-          style={styles.saveButton}
-        >
-          <LinearGradient
-            colors={["#fff", "#e0f7ff"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.saveGradient}
-          >
-            <Text style={styles.saveText}>Save & Continue</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  innerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  backText: {
-    color: "#fff",
-    fontSize: 15,
-  },
-  title: {
-    color: "#fff",
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#E1F5FE",
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  inputContainer: {
-    marginBottom: 18,
-  },
-  label: {
-    color: "#E1F5FE",
-    fontSize: 14,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: "#fff",
-    fontSize: 16,
-  },
-  saveButton: {
+  container: { flex: 1, justifyContent: "center", padding: 24 },
+  title: { fontSize: 24, fontWeight: "800", marginBottom: 20 },
+  inputWrap: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 15,
   },
-  saveGradient: {
+  input: { flex: 1, padding: 14 },
+  btn: {
+    backgroundColor: "#0871da",
+    padding: 14,
     borderRadius: 30,
-    paddingVertical: 14,
-    paddingHorizontal: 60,
+    marginTop: 10,
   },
-  saveText: {
-    color: "#0871da",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  btnText: { color: "#fff", textAlign: "center", fontWeight: "700" },
 });

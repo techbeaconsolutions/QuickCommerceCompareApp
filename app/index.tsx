@@ -19,7 +19,7 @@ export default function Splash() {
                     // 🚪 New or logged-out user → go to Onboarding/Login
                     router.replace("/onboarding" as Href);
                 }
-            }, 1500);
+            }, 1200);
             return () => clearTimeout(timer);
         }
     }, [router, token, loading]);
@@ -28,7 +28,7 @@ export default function Splash() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Image
-                source={require("../assets/images/android-icon-foreground.png")}
+                source={require("../assets/images/app_logo.png")}
                 style={styles.logo}
             />
             <Text style={[styles.title, { color: colors.text }]}>QuickCommerce</Text>

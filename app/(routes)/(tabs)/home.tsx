@@ -24,9 +24,9 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-import { useTheme } from "../../context/ThemeContext";
-import api from "../../src/api/apiClient";
-import BestPriceBanner from "../../src/components/BestPriceBanner";
+import { useTheme } from "../../../context/ThemeContext";
+import api, { getScrapeResult } from "../../../src/api/apiClient";
+import BestPriceBanner from "../../../src/components/BestPriceBanner";
 
 /** Product Type */
 type Product = {
@@ -391,95 +391,183 @@ export default function HomeScreen() {
 
         const state = status?.state ?? status?.status ?? "unknown";
 
+        // if (state === "completed") {
+        //   clearPollInterval();
+        //   clearMessageInterval();
+
+        //   const raw = status.result ?? status.raw ?? status.rawResult ?? status.rawData ?? status;
+
+        //   const lowest =
+        //     status.lowestPriceProduct ??
+        //     raw?.lowestPriceProduct ??
+        //     null;
+
+        //   // Normalizer
+        //   const normalize = (item: any) => ({
+        //     name: item?.name || item?.title || "",
+        //     image: item?.image || item?.img || "",
+        //     price: item?.price ?? item?.finalPrice ?? item?.displayPrice ?? "",
+        //     quantity: item?.quantity ?? item?.qty ?? "",
+        //     platform: item?.platform ? normalizePlatform(item.platform) : item?.platform ?? "",
+        //     url: item?.url,
+        //     pincode: item?.pincode,
+        //   });
+
+        //   // FIX: read sortedResults instead of sorted
+        //   const sortedFromBackend =
+        //     status.sortedResults ??
+        //     raw?.sortedResults ??
+        //     status.sorted ??
+        //     raw?.sorted ??
+        //     null;
+
+        //   if (Array.isArray(sortedFromBackend) && sortedFromBackend.length > 0) {
+        //     setResults(sortedFromBackend.map(normalize));
+        //   } else {
+        //     const aggregated = [
+        //       ...(raw?.blinkit ?? []),
+        //       ...(raw?.zepto ?? []),
+        //       ...(raw?.swiggy ?? []),
+        //     ].map(normalize);
+
+        //     setResults(aggregated);
+        //   }
+
+
+        //   /** ----------------------------
+        //    * ⭐ Compute Best Price Banner
+        //    * ---------------------------- */
+        //   if (lowest) {
+        //     const normalizeNum = (val: any) =>
+        //       parseFloat(String(val).replace("₹", "").trim()) || 0;
+
+        //     // lowest numeric price
+        //     const lowestPriceNum = normalizeNum(lowest.price);
+
+        //     // find highest in backend sorted prices
+        //     const sortedList = status.sorted ?? [];
+        //     const highestItem =
+        //       sortedList.length > 0 ? sortedList[sortedList.length - 1] : null;
+
+        //     const highestPriceNum = highestItem
+        //       ? normalizeNum(highestItem.price)
+        //       : lowestPriceNum;
+
+        //     const difference = Math.max(0, highestPriceNum - lowestPriceNum);
+
+        //     setBestPrice({
+        //       name: lowest?.name || "",
+        //       price: `₹${lowestPriceNum}`,    // ⭐ ALWAYS STRING WITH ₹
+        //       image: lowest?.image,
+        //       platform: normalizePlatform(lowest?.platform),
+        //       quantity: lowest?.quantity,
+        //       differenceFromHighest: difference, // ⭐ REQUIRED FIELD
+        //     });
+        //   } else {
+        //     setBestPrice(null);
+        //   }
+
+        //   setLoading(false);
+        //   setSuccess(true);
+
+        //   Toast.show({ type: "success", text1: "Scraping Completed!" });
+
+        //   // ⭐ After showing "Done" for 1 second:
+        //   setTimeout(() => {
+        //     setProduct("");    // Clear search input
+        //     setSuccess(false); // Reset button back to "Compare"
+        //   }, 1000);
+
+        //   return;
+
+        // }
+
         if (state === "completed") {
           clearPollInterval();
           clearMessageInterval();
 
-          const raw = status.result ?? status.raw ?? status.rawResult ?? status.rawData ?? status;
+          try {
+            // ✅ FETCH FINAL RESULT FILE
+            const finalResult = await getScrapeResult();
 
-          const lowest =
-            status.lowestPriceProduct ??
-            raw?.lowestPriceProduct ??
-            null;
-
-          // Normalizer
-          const normalize = (item: any) => ({
-            name: item?.name || item?.title || "",
-            image: item?.image || item?.img || "",
-            price: item?.price ?? item?.finalPrice ?? item?.displayPrice ?? "",
-            quantity: item?.quantity ?? item?.qty ?? "",
-            platform: item?.platform ? normalizePlatform(item.platform) : item?.platform ?? "",
-            url: item?.url,
-            pincode: item?.pincode,
-          });
-
-          // FIX: read sortedResults instead of sorted
-          const sortedFromBackend =
-            status.sortedResults ??
-            raw?.sortedResults ??
-            status.sorted ??
-            raw?.sorted ??
-            null;
-
-          if (Array.isArray(sortedFromBackend) && sortedFromBackend.length > 0) {
-            setResults(sortedFromBackend.map(normalize));
-          } else {
-            const aggregated = [
-              ...(raw?.blinkit ?? []),
-              ...(raw?.zepto ?? []),
-              ...(raw?.swiggy ?? []),
-            ].map(normalize);
-
-            setResults(aggregated);
-          }
-
-
-          /** ----------------------------
-           * ⭐ Compute Best Price Banner
-           * ---------------------------- */
-          if (lowest) {
-            const normalizeNum = (val: any) =>
-              parseFloat(String(val).replace("₹", "").trim()) || 0;
-
-            // lowest numeric price
-            const lowestPriceNum = normalizeNum(lowest.price);
-
-            // find highest in backend sorted prices
-            const sortedList = status.sorted ?? [];
-            const highestItem =
-              sortedList.length > 0 ? sortedList[sortedList.length - 1] : null;
-
-            const highestPriceNum = highestItem
-              ? normalizeNum(highestItem.price)
-              : lowestPriceNum;
-
-            const difference = Math.max(0, highestPriceNum - lowestPriceNum);
-
-            setBestPrice({
-              name: lowest?.name || "",
-              price: `₹${lowestPriceNum}`,    // ⭐ ALWAYS STRING WITH ₹
-              image: lowest?.image,
-              platform: normalizePlatform(lowest?.platform),
-              quantity: lowest?.quantity,
-              differenceFromHighest: difference, // ⭐ REQUIRED FIELD
+            const normalize = (item: any) => ({
+              name: item?.name || item?.title || "",
+              image: item?.image || item?.img || "",
+              price: item?.price ?? "",
+              quantity: item?.quantity ?? item?.qty ?? "",
+              platform: normalizePlatform(item?.platform),
+              url: item?.url,
+              pincode: item?.pincode,
             });
-          } else {
-            setBestPrice(null);
+
+            // ----------------------------
+            // RESULTS LIST
+            // ----------------------------
+            if (Array.isArray(finalResult?.results)) {
+              setResults(finalResult.results.map(normalize));
+            } else {
+              setResults([]);
+            }
+
+
+            // ----------------------------
+            // BEST PRICE BANNER
+            // ----------------------------
+            if (finalResult?.lowestPriceProduct) {
+              const lowest = finalResult.lowestPriceProduct;
+
+              const lowestPriceNum =
+                parseFloat(String(lowest.price).replace("₹", "")) || 0;
+
+              const highestItem =
+                finalResult.sortedResults?.[
+                finalResult.sortedResults.length - 1
+                ];
+
+              const highestPriceNum = highestItem
+                ? parseFloat(String(highestItem.price).replace("₹", "")) ||
+                lowestPriceNum
+                : lowestPriceNum;
+
+              setBestPrice({
+                name: lowest.name,
+                price: `₹${lowestPriceNum}`,
+                image: lowest.image,
+                platform: normalizePlatform(lowest.platform),
+                quantity: lowest.quantity,
+                differenceFromHighest: Math.max(
+                  0,
+                  highestPriceNum - lowestPriceNum
+                ),
+              });
+            } else {
+              setBestPrice(null);
+            }
+
+            setLoading(false);
+            setSuccess(true);
+
+            Toast.show({
+              type: "success",
+              text1: "Scraping Completed!",
+            });
+
+            setTimeout(() => {
+              setProduct("");
+              setSuccess(false);
+            }, 1000);
+
+          } catch (err) {
+            console.error("❌ Failed to load result:", err);
+            Toast.show({
+              type: "error",
+              text1: "Error",
+              text2: "Failed to load comparison result",
+            });
+            setLoading(false);
           }
-
-          setLoading(false);
-          setSuccess(true);
-
-          Toast.show({ type: "success", text1: "Scraping Completed!" });
-
-          // ⭐ After showing "Done" for 1 second:
-          setTimeout(() => {
-            setProduct("");    // Clear search input
-            setSuccess(false); // Reset button back to "Compare"
-          }, 1000);
 
           return;
-
         }
 
         if (state === "failed") {
@@ -617,7 +705,7 @@ export default function HomeScreen() {
   }, [isModalVisible]);
 
   const platformLogos: any = {
-    Blinkit: require("../../assets/images/blinkit.png"),
+    Blinkit: require("../../../assets/images/blinkit.png"),
   };
 
   return (
@@ -761,7 +849,7 @@ export default function HomeScreen() {
         {!loading && results.length === 0 && (
           <Text style={{ textAlign: "center", color: colors.secondaryText, marginVertical: 50 }}>No results found. Try searching a product.</Text>
         )}
-        <br />
+        <View style={{ height: 20 }} />
         {!loading && results.length > 0 && (
           <FlatList
             data={results}

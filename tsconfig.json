@@ -18,9 +18,9 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts",
     "src/api/**/*.js",
-    "app/(tabs)/**/*.tsx"
+    "app/(routes)/(tabs)/**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }

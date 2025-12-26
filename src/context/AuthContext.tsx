@@ -1,10 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { login as apiLogin, signup as apiSignup } from "../api/apiClient"; // 🔹 uses your existing API file
+import { login as apiLogin, signup as apiSignup } from "../api/apiClient";
 
-// ----------------------------------------------------
-// 🧩 Type Definitions
-// ----------------------------------------------------
 interface User {
   _id?: string;
   name: string;
@@ -20,112 +17,111 @@ interface AuthContextProps {
   logout: () => Promise<void>;
 }
 
-// ----------------------------------------------------
-// 🧱 Context Creation
-// ----------------------------------------------------
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   token: null,
   loading: true,
-  login: async () => { },
-  signup: async () => { },
-  logout: async () => { },
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
 });
 
-// ----------------------------------------------------
-// 🧠 Provider Component
-// ----------------------------------------------------
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Auto-load token on app start
+  // -------------------------------
+  // Restore session on app start
+  // -------------------------------
   useEffect(() => {
-    (async () => {
+    const restoreAuth = async () => {
       try {
         const storedToken = await AsyncStorage.getItem("token");
         const storedUser = await AsyncStorage.getItem("user");
-        if (storedToken && storedUser) {
-          setToken(JSON.parse(storedToken));
-          setUser(JSON.parse(storedUser));
+
+        if (storedToken) {
+          setToken(storedToken);
+        }
+
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (e) {
+            console.log("USER JSON PARSE ERROR:", e);
+            await AsyncStorage.removeItem("user");
+          }
         }
       } catch (err) {
-        console.error("❌ Error restoring auth state:", err);
+        console.log("AUTH RESTORE ERROR:", err);
       } finally {
         setLoading(false);
       }
-    })();
+    };
+
+    restoreAuth();
   }, []);
 
-  // ----------------------------------------------------
-  // 🔹 Login
-  // ----------------------------------------------------
+  // -------------------------------
+  // LOGIN (CRITICAL FIX)
+  // -------------------------------
   const login = async (email: string, password: string) => {
     try {
+      console.log("LOGIN START:", email);
+
       const res = await apiLogin(email, password);
-      if (res.success && res.token) {
-        setUser(res.user);
-        setToken(res.token);
-        await AsyncStorage.setItem("token", JSON.stringify(res.token));
-        await AsyncStorage.setItem("user", JSON.stringify(res.user));
-      } else {
-        throw new Error("Login failed. Invalid credentials.");
+
+      console.log("LOGIN RESPONSE:", res);
+
+      if (!res?.success || !res?.token || !res?.user) {
+        throw new Error(res?.message || "Invalid login response");
       }
-    } catch (err) {
-      console.error("❌ Login error:", err);
-      throw err;
+
+      setToken(res.token);
+      setUser(res.user);
+
+      await AsyncStorage.setItem("token", res.token);
+      await AsyncStorage.setItem("user", JSON.stringify(res.user));
+
+      console.log("LOGIN SUCCESS, TOKEN SAVED");
+    } catch (error: any) {
+      console.log("AUTH LOGIN ERROR:", error?.message || error);
+      throw error; // 🔴 MUST THROW
     }
   };
 
-  // ----------------------------------------------------
-  // 🔹 Signup
-  // ----------------------------------------------------
+  // -------------------------------
+  // SIGNUP
+  // -------------------------------
   const signup = async (name: string, email: string, password: string) => {
     try {
       const res = await apiSignup(name, email, password);
-      if (res.success && res.user) {
-      } else {
-        throw new Error("Signup failed.");
+      if (!res?.success) {
+        throw new Error(res?.message || "Signup failed");
       }
-    } catch (err) {
-      console.error("❌ Signup error:", err);
-      throw err;
+    } catch (error) {
+      console.log("SIGNUP ERROR:", error);
+      throw error;
     }
   };
 
-  // ----------------------------------------------------
-  // 🔹 Logout
-  // ----------------------------------------------------
+  // -------------------------------
+  // LOGOUT
+  // -------------------------------
   const logout = async () => {
-    try {
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("user");
-      setUser(null);
-      setToken(null);
-    } catch (err) {
-      console.error("❌ Logout failed:", err);
-    }
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
   };
-
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        token,
-        loading,
-        login,
-        signup,
-        logout,
-      }}
+      value={{ user, token, loading, login, signup, logout }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// ----------------------------------------------------
-// 🧩 Hook for easy access
-// ----------------------------------------------------
 export const useAuth = () => useContext(AuthContext);

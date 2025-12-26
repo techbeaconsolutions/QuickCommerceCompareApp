@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
-import { useTheme } from "../../context/ThemeContext";
-import { useAuth } from "../../src/context/AuthContext";
+import { useTheme } from "../../../context/ThemeContext";
+import { useAuth } from "../../../src/context/AuthContext";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -76,9 +76,9 @@ export default function ProfileScreen() {
         <Text style={[styles.username, { color: colors.text }]}>
           {user?.name || "Guest User"}
         </Text>
-        <Text style={[styles.email, { color: colors.secondaryText }]}>
+        {/* <Text style={[styles.email, { color: colors.secondaryText }]}>
           {user?.email || "guest@example.com"}
-        </Text>
+        </Text> */}
       </View>
 
       {/* Theme Toggle */}
