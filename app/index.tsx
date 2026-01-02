@@ -1,29 +1,32 @@
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useRouter, Href } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
-import { useAuth } from "../src/context/AuthContext"; // 👈 import AuthContext
+import { useAuth } from "../src/context/AuthContext";
+
+SplashScreen.preventAutoHideAsync(); // ✅ keep native splash visible
 
 export default function Splash() {
     const router = useRouter();
     const { colors } = useTheme();
-    const { token, loading } = useAuth(); // 👈 access login state
+    const { token, loading } = useAuth();
 
     useEffect(() => {
         if (!loading) {
-            const timer = setTimeout(() => {
+            const timer = setTimeout(async () => {
+                await SplashScreen.hideAsync(); // ✅ NOW valid
+
                 if (token) {
-                    // ✅ User is already logged in → go to Home
                     router.replace("/(tabs)/home" as Href);
                 } else {
-                    // 🚪 New or logged-out user → go to Onboarding/Login
                     router.replace("/onboarding" as Href);
                 }
             }, 1200);
+
             return () => clearTimeout(timer);
         }
-    }, [router, token, loading]);
-
+    }, [token, loading]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -31,7 +34,9 @@ export default function Splash() {
                 source={require("../assets/images/app_logo.png")}
                 style={styles.logo}
             />
-            <Text style={[styles.title, { color: colors.text }]}>QuickCommerce</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+                QuickCommerce
+            </Text>
             <Text style={[styles.subtitle, { color: colors.text }]}>
                 Compare. Save. Repeat.
             </Text>
