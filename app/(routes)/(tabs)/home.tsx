@@ -391,97 +391,6 @@ export default function HomeScreen() {
 
         const state = status?.state ?? status?.status ?? "unknown";
 
-        // if (state === "completed") {
-        //   clearPollInterval();
-        //   clearMessageInterval();
-
-        //   const raw = status.result ?? status.raw ?? status.rawResult ?? status.rawData ?? status;
-
-        //   const lowest =
-        //     status.lowestPriceProduct ??
-        //     raw?.lowestPriceProduct ??
-        //     null;
-
-        //   // Normalizer
-        //   const normalize = (item: any) => ({
-        //     name: item?.name || item?.title || "",
-        //     image: item?.image || item?.img || "",
-        //     price: item?.price ?? item?.finalPrice ?? item?.displayPrice ?? "",
-        //     quantity: item?.quantity ?? item?.qty ?? "",
-        //     platform: item?.platform ? normalizePlatform(item.platform) : item?.platform ?? "",
-        //     url: item?.url,
-        //     pincode: item?.pincode,
-        //   });
-
-        //   // FIX: read sortedResults instead of sorted
-        //   const sortedFromBackend =
-        //     status.sortedResults ??
-        //     raw?.sortedResults ??
-        //     status.sorted ??
-        //     raw?.sorted ??
-        //     null;
-
-        //   if (Array.isArray(sortedFromBackend) && sortedFromBackend.length > 0) {
-        //     setResults(sortedFromBackend.map(normalize));
-        //   } else {
-        //     const aggregated = [
-        //       ...(raw?.blinkit ?? []),
-        //       ...(raw?.zepto ?? []),
-        //       ...(raw?.swiggy ?? []),
-        //     ].map(normalize);
-
-        //     setResults(aggregated);
-        //   }
-
-
-        //   /** ----------------------------
-        //    * ⭐ Compute Best Price Banner
-        //    * ---------------------------- */
-        //   if (lowest) {
-        //     const normalizeNum = (val: any) =>
-        //       parseFloat(String(val).replace("₹", "").trim()) || 0;
-
-        //     // lowest numeric price
-        //     const lowestPriceNum = normalizeNum(lowest.price);
-
-        //     // find highest in backend sorted prices
-        //     const sortedList = status.sorted ?? [];
-        //     const highestItem =
-        //       sortedList.length > 0 ? sortedList[sortedList.length - 1] : null;
-
-        //     const highestPriceNum = highestItem
-        //       ? normalizeNum(highestItem.price)
-        //       : lowestPriceNum;
-
-        //     const difference = Math.max(0, highestPriceNum - lowestPriceNum);
-
-        //     setBestPrice({
-        //       name: lowest?.name || "",
-        //       price: `₹${lowestPriceNum}`,    // ⭐ ALWAYS STRING WITH ₹
-        //       image: lowest?.image,
-        //       platform: normalizePlatform(lowest?.platform),
-        //       quantity: lowest?.quantity,
-        //       differenceFromHighest: difference, // ⭐ REQUIRED FIELD
-        //     });
-        //   } else {
-        //     setBestPrice(null);
-        //   }
-
-        //   setLoading(false);
-        //   setSuccess(true);
-
-        //   Toast.show({ type: "success", text1: "Scraping Completed!" });
-
-        //   // ⭐ After showing "Done" for 1 second:
-        //   setTimeout(() => {
-        //     setProduct("");    // Clear search input
-        //     setSuccess(false); // Reset button back to "Compare"
-        //   }, 1000);
-
-        //   return;
-
-        // }
-
         if (state === "completed") {
           clearPollInterval();
           clearMessageInterval();
@@ -530,16 +439,18 @@ export default function HomeScreen() {
                 : lowestPriceNum;
 
               setBestPrice({
-                name: lowest.name,
+                name: lowest.name || lowest.title || "Unknown Product",
+                image: lowest.image || lowest.img || "",
                 price: `₹${lowestPriceNum}`,
-                image: lowest.image,
+                quantity: lowest.quantity || lowest.qty || "",
                 platform: normalizePlatform(lowest.platform),
-                quantity: lowest.quantity,
+                url: lowest.url,
                 differenceFromHighest: Math.max(
                   0,
                   highestPriceNum - lowestPriceNum
                 ),
               });
+
             } else {
               setBestPrice(null);
             }
@@ -710,7 +621,12 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ ...styles.starContainer, pointerEvents: "none" }}>
+      <View
+        style={[
+          styles.starContainer,
+          { pointerEvents: "none" },
+        ]}
+      >
         {starLayout.map((s, i) => {
           return (
             <React.Fragment key={i}>
@@ -837,7 +753,24 @@ export default function HomeScreen() {
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Results</Text>
 
-        {bestPrice && <BestPriceBanner bestPrice={bestPrice} colors={colors} />}
+        {bestPrice && (
+          <BestPriceBanner
+            bestPrice={bestPrice}
+            colors={colors}
+            onPress={() =>
+              openProductModal({
+                name: bestPrice.name || "Unknown Product",
+                image: bestPrice.image,
+                price: bestPrice.price,
+                platform: bestPrice.platform,
+                quantity: bestPrice.quantity || "Unknown quantity",
+                url: bestPrice.url,
+              })
+            }
+          />
+        )}
+
+
 
         {loading && (
           <View style={{ alignItems: "center", marginVertical: 30 }}>
@@ -1011,8 +944,11 @@ export default function HomeScreen() {
             </Text>
 
             <Text style={[styles.modalQty, { color: colors.secondaryText }]}>
-              {selectedProduct?.quantity || "Unknown quantity"}
+              {selectedProduct?.quantity
+                ? `Quantity: ${selectedProduct.quantity}`
+                : "Quantity not available"}
             </Text>
+
 
             <TouchableOpacity
               style={styles.orderBtn}
@@ -1149,12 +1085,15 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     alignItems: "center",
-    elevation: 12,
     borderWidth: 2.5,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+
+    // Android
+    elevation: 12,
+
+    // Web / New RN
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 8px 24px rgba(0,0,0,0.25)" }
+      : {}),
   },
   closeBtn: {
     position: "absolute",

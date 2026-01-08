@@ -2,6 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Href, useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import { Animated, Easing, Image, StyleSheet, Text } from "react-native";
+import { Platform } from "react-native";
 
 export default function SuccessScreen() {
   const router = useRouter();
@@ -78,11 +79,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 30,
-    boxShadowColor: "#000",
-    boxShadowOpacity: 0.2,
-    boxShadowOffset: { width: 0, height: 4 },
-    boxShadowRadius: 8,
+
+    // Android shadow
     elevation: 10,
+
+    // Web shadow
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 6px 16px rgba(0,0,0,0.2)" }
+      : {}),
   },
   checkmark: {
     width: 60,

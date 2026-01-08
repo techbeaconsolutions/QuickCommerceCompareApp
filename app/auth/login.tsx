@@ -83,13 +83,12 @@ export default function LoginScreen() {
       router.replace("/");
 
     } catch (err: any) {
-      console.log("LOGIN ERROR:", err);
+      console.log("LOGIN ERROR FULL:", err?.response?.data || err);
 
       Toast.show({
         type: "error",
         text1: "Login failed",
-        text2:
-          "Invalib user",
+        text2: err?.response?.data?.message || "Invalid email or password",
       });
     } finally {
       setLoading(false);
@@ -172,13 +171,13 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
         <TouchableOpacity
-  onPress={() => router.push("/auth/forgot-password")}
-  style={{ marginTop: 15 }}
->
-  <Text style={{ color: "#E1F5FE", textAlign: "center" }}>
-    Forgot Password?
-  </Text>
-</TouchableOpacity>
+          onPress={() => router.push("/auth/forgot-password")}
+          style={{ marginTop: 15 }}
+        >
+          <Text style={{ color: "#E1F5FE", textAlign: "center" }}>
+            Forgot Password?
+          </Text>
+        </TouchableOpacity>
 
       </KeyboardAvoidingView>
     </LinearGradient>

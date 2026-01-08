@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { useAuth } from "../../src/context/AuthContext";
 
 export default function SignupScreen() {
   const router = useRouter();
-const { signup } = useAuth();
+  const { signup } = useAuth();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -26,15 +26,41 @@ const { signup } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!name || !email || !password || !confirmPassword) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    // 1️⃣ Empty field validation
+    if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
       Toast.show({
         type: "error",
-        text1: "Missing fields",
-        text2: "Please fill in all required details.",
+        text1: "Incomplete details",
+        text2: "All fields are mandatory.",
       });
       return;
     }
 
+    // 2️⃣ Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid email",
+        text2: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    // 3️⃣ Password length validation
+    if (password.length < 6) {
+      Toast.show({
+        type: "error",
+        text1: "Weak password",
+        text2: "Password must be at least 6 characters long.",
+      });
+      return;
+    }
+
+    // 4️⃣ Password match validation
     if (password !== confirmPassword) {
       Toast.show({
         type: "error",
@@ -46,7 +72,8 @@ const { signup } = useAuth();
 
     try {
       setLoading(true);
-      await signup(name, email, password);
+
+      await signup(trimmedName, trimmedEmail, password);
 
       Toast.show({
         type: "success",
@@ -54,14 +81,16 @@ const { signup } = useAuth();
         text2: "Please log in to continue.",
       });
 
-      // Redirect to login screen
       router.replace("/auth/login" as Href);
-    } catch (err) {
-      console.error("Signup failed:", err);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        "Something went wrong. Please try again.";
+
       Toast.show({
         type: "error",
-        text1: "Signup Failed",
-        text2: "Email may already be in use or invalid.",
+        text1: "Signup failed",
+        text2: message,
       });
     } finally {
       setLoading(false);
@@ -83,11 +112,8 @@ const { signup } = useAuth();
           contentContainerStyle={styles.innerContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ marginBottom: 20 }}
-          >
+          {/* Back */}
+          <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 20 }}>
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
 
@@ -97,7 +123,7 @@ const { signup } = useAuth();
             Sign up to explore the best deals in QuickCommerce Compare.
           </Text>
 
-          {/* Full Name */}
+          {/* Name */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
@@ -149,7 +175,7 @@ const { signup } = useAuth();
             />
           </View>
 
-          {/* Sign Up Button */}
+          {/* Signup Button */}
           <TouchableOpacity
             onPress={handleSignup}
             style={styles.signupButton}
@@ -157,8 +183,6 @@ const { signup } = useAuth();
           >
             <LinearGradient
               colors={["#fff", "#e0f7ff"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
               style={styles.signupGradient}
             >
               {loading ? (
@@ -169,7 +193,7 @@ const { signup } = useAuth();
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Already have an account */}
+          {/* Login */}
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account? </Text>
             <TouchableOpacity onPress={() => router.push("/auth/login" as Href)}>
@@ -183,19 +207,14 @@ const { signup } = useAuth();
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   innerContainer: {
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
-  backText: {
-    color: "#fff",
-    fontSize: 15,
-  },
+  backText: { color: "#fff", fontSize: 15 },
   title: {
     color: "#fff",
     fontSize: 26,
@@ -209,9 +228,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 40,
   },
-  inputContainer: {
-    marginBottom: 18,
-  },
+  inputContainer: { marginBottom: 18 },
   label: {
     color: "#E1F5FE",
     fontSize: 14,
@@ -225,10 +242,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
   },
-  signupButton: {
-    alignItems: "center",
-    marginTop: 20,
-  },
+  signupButton: { alignItems: "center", marginTop: 20 },
   signupGradient: {
     borderRadius: 30,
     paddingVertical: 14,
@@ -244,12 +258,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 25,
   },
-  loginText: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  loginLink: {
-    color: "#fff",
-    fontWeight: "700",
-  },
+  loginText: { color: "#fff", fontSize: 14 },
+  loginLink: { color: "#fff", fontWeight: "700" },
 });

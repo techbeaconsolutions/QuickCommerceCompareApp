@@ -4,12 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Platform,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
@@ -161,10 +161,14 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 24,
     width: "90%",
-    boxShadowColor: "#000",
-    boxShadowOpacity: 0.05,
-    boxShadowRadius: 4,
+
+    // Android
     elevation: 2,
+
+    // Web
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 2px 6px rgba(0,0,0,0.05)" }
+      : {}),
   },
   themeLabel: { fontSize: 16, fontWeight: "600" },
   logoutButton: {

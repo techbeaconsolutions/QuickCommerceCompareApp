@@ -1,13 +1,23 @@
 // components/BestPriceBanner.tsx
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Pressable,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function BestPriceBanner({ bestPrice, colors }: any) {
+export default function BestPriceBanner({
+  bestPrice,
+  colors,
+  onPress, // ✅ NEW
+}: any) {
   if (!bestPrice) return null;
 
-    console.log("⭐ BEST PRICE DEBUG →", {
+  console.log("⭐ BEST PRICE DEBUG →", {
     image: bestPrice.image,
     price: bestPrice.price,
     title: bestPrice.title || bestPrice.name,
@@ -18,7 +28,8 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
     Blinkit: "https://assets.grofer.io/app-icon/blinkit.png",
     Zepto: "https://cdn.zeptonow.com/app/zepto-logo.png",
     Swiggy: "https://cdn.swiggy.com/uploads/instamart_xhdpi_2.png",
-    Flipkart: "https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/flipkart-plus_8d85f4.png",
+    Flipkart:
+      "https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/flipkart-plus_8d85f4.png",
   };
 
   const PLATFORM_COLORS = {
@@ -28,8 +39,17 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
     Flipkart: "#2874F0",
   };
 
+  const normalizeImageUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith("http://")) {
+      return url.replace("http://", "https://");
+    }
+    return url;
+  };
+
   const platformLogo = PLATFORM_LOGO_URLS[bestPrice.platform];
-  const platformColor = PLATFORM_COLORS[bestPrice.platform] || "#333";
+  const platformColor =
+    PLATFORM_COLORS[bestPrice.platform] || "#333";
 
   return (
     <LinearGradient
@@ -38,29 +58,52 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
       end={{ x: 1, y: 1 }}
       style={styles.gradientWrapper}
     >
-      <View style={[styles.card, { backgroundColor: colors.card }]}>
-
+      <Pressable
+        onPress={onPress} // ✅ SAME AS HOME CARD
+        style={({ pressed }) => [
+          styles.card,
+          {
+            backgroundColor: colors.card,
+            opacity: pressed ? 0.92 : 1,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          },
+        ]}
+      >
         {/* Product Image */}
         {bestPrice.image && (
-          <Image source={{ uri: bestPrice.image }} style={styles.productImage} />
+          <Image
+            source={{ uri: normalizeImageUrl(bestPrice.image) }}
+            style={styles.productImage}
+          />
         )}
 
         {/* Product Title */}
-        <Text style={[styles.productTitle, { color: colors.text }]}>
+        <Text
+          style={[styles.productTitle, { color: colors.text }]}
+          numberOfLines={2}
+        >
           {bestPrice.title || bestPrice.name}
         </Text>
 
         {/* Title Row */}
         <View style={styles.titleRow}>
-          <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
-          <Text style={[styles.titleText, { color: colors.text }]}>
+          <Ionicons
+            name="pricetag-outline"
+            size={20}
+            color={colors.primary}
+          />
+          <Text
+            style={[styles.titleText, { color: colors.text }]}
+          >
             Best Deal Found
           </Text>
         </View>
 
-        {/* Price + Chip */}
+        {/* Price + Platform */}
         <View style={styles.priceRow}>
-          <Text style={[styles.priceText, { color: colors.primary }]}>
+          <Text
+            style={[styles.priceText, { color: colors.primary }]}
+          >
             {bestPrice.price}
           </Text>
 
@@ -68,7 +111,7 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
             <View
               style={[
                 styles.platformChip,
-                { backgroundColor: platformColor }
+                { backgroundColor: platformColor },
               ]}
             >
               <Image
@@ -81,7 +124,7 @@ export default function BestPriceBanner({ bestPrice, colors }: any) {
             </View>
           )}
         </View>
-      </View>
+      </Pressable>
     </LinearGradient>
   );
 }
@@ -92,13 +135,11 @@ const styles = StyleSheet.create({
     padding: 2,
     marginTop: 20,
   },
-
   card: {
     borderRadius: 18,
     padding: 16,
     alignItems: "center",
   },
-
   productImage: {
     width: 90,
     height: 90,
@@ -106,37 +147,31 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     marginBottom: 12,
   },
-
   productTitle: {
     fontSize: 16,
     fontWeight: "700",
     textAlign: "center",
     marginBottom: 6,
   },
-
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
   },
-
   titleText: {
     fontSize: 15,
     fontWeight: "700",
     marginLeft: 6,
   },
-
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
   },
-
   priceText: {
     fontSize: 28,
     fontWeight: "800",
   },
-
   platformChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -145,18 +180,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginLeft: 8,
   },
-
   platformLogo: {
     width: 20,
     height: 20,
     resizeMode: "contain",
     marginRight: 6,
   },
-
   platformChipText: {
     fontSize: 13,
     fontWeight: "700",
     color: "#fff",
   },
 });
-

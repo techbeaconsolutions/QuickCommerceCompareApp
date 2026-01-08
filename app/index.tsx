@@ -5,8 +5,6 @@ import { useRouter, Href } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../src/context/AuthContext";
 
-SplashScreen.preventAutoHideAsync(); // ✅ keep native splash visible
-
 export default function Splash() {
     const router = useRouter();
     const { colors } = useTheme();

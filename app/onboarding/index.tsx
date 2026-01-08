@@ -9,6 +9,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, Href } from "expo-router";
+import { Platform } from "react-native";
+import type { TextStyle } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -245,9 +247,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     textAlign: "center",
     marginBottom: 8,
-    textShadowColor: "rgba(0,0,0,0.25)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+
+    ...(Platform.OS === "web"
+      ? ({ textShadow: "0px 2px 4px rgba(0,0,0,0.25)" } as TextStyle)
+      : {
+        textShadowColor: "rgba(0,0,0,0.25)",
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+      }),
   },
 
   description: {
@@ -297,12 +304,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: 30,
+
+    // Android
     elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+
+    // Web / New RN
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 3px 8px rgba(0,0,0,0.15)" }
+      : {}),
   },
+
 
   nextText: {
     fontWeight: "700",
