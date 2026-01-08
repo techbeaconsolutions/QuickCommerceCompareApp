@@ -59,14 +59,6 @@ export async function getScrapeResult() {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.log("AXIOS ERROR FULL:", {
-      message: error.message,
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      response: error.response?.data,
-    });
-
     // Auto logout on token expiry / invalid token
     if (
       error.response?.status === 401 &&

@@ -65,7 +65,6 @@ export default function ForgotPassword() {
         params: { email: cleanEmail },
       } as Href);
     } catch (err: any) {
-      console.log("FORGOT PASSWORD ERROR:", err);
 
       Toast.show({
         type: "error",

@@ -48,12 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           try {
             setUser(JSON.parse(storedUser));
           } catch (e) {
-            console.log("USER JSON PARSE ERROR:", e);
             await AsyncStorage.removeItem("user");
           }
         }
       } catch (err) {
-        console.log("AUTH RESTORE ERROR:", err);
       } finally {
         setLoading(false);
       }
@@ -67,12 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // -------------------------------
   const login = async (email: string, password: string) => {
     try {
-      console.log("LOGIN START:", email);
-
       const res = await apiLogin(email, password);
-
-      console.log("LOGIN RESPONSE:", res);
-
       if (!res?.success || !res?.token || !res?.user) {
         throw new Error(res?.message || "Invalid login response");
       }
@@ -82,10 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       await AsyncStorage.setItem("token", res.token);
       await AsyncStorage.setItem("user", JSON.stringify(res.user));
-
-      console.log("LOGIN SUCCESS, TOKEN SAVED");
     } catch (error: any) {
-      console.log("AUTH LOGIN ERROR:", error?.message || error);
       throw error; // 🔴 MUST THROW
     }
   };
@@ -100,7 +90,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw new Error(res?.message || "Signup failed");
       }
     } catch (error) {
-      console.log("SIGNUP ERROR:", error);
       throw error;
     }
   };

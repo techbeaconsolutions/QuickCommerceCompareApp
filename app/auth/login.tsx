@@ -83,7 +83,6 @@ export default function LoginScreen() {
       router.replace("/");
 
     } catch (err: any) {
-      console.log("LOGIN ERROR FULL:", err?.response?.data || err);
 
       Toast.show({
         type: "error",

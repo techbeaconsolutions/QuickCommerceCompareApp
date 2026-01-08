@@ -17,13 +17,6 @@ export default function BestPriceBanner({
 }: any) {
   if (!bestPrice) return null;
 
-  console.log("⭐ BEST PRICE DEBUG →", {
-    image: bestPrice.image,
-    price: bestPrice.price,
-    title: bestPrice.title || bestPrice.name,
-    platform: bestPrice.platform,
-  });
-
   const PLATFORM_LOGO_URLS = {
     Blinkit: "https://assets.grofer.io/app-icon/blinkit.png",
     Zepto: "https://cdn.zeptonow.com/app/zepto-logo.png",

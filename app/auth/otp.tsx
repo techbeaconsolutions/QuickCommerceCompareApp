@@ -43,31 +43,21 @@ import { apiClient } from "../../src/api/apiClient";
 const verifyOtp = async () => {
   const cleanOtp = otp.replace(/\s/g, "");
 
-  // 🔍 DEBUG LOGS
-  console.log("📩 Email:", email);
-  console.log("🔢 Raw OTP:", otp);
-  console.log("🧹 Clean OTP:", cleanOtp);
-  console.log("📏 OTP Length:", cleanOtp.length);
-
   if (cleanOtp.length !== 6) {
-    console.log("❌ OTP length invalid");
     Toast.show({ type: "error", text1: "Invalid OTP" });
     return;
   }
 
   try {
     setVerifying(true);
-    console.log("🚀 Sending verify-otp request...");
 
     const res = await apiClient.post("/auth/verify-otp", {
       email,
       otp: cleanOtp,
     });
 
-    console.log("✅ Verify OTP response:", res.data);
 
     if (res.data?.success) {
-      console.log("🔑 Reset token received:", res.data.resetToken);
 
       router.replace({
         pathname: "/auth/reset-password",
@@ -77,7 +67,6 @@ const verifyOtp = async () => {
       });
     }
   } catch (err: any) {
-    console.log("❌ Verify OTP error:", err.response?.data || err.message);
 
     Toast.show({
       type: "error",
@@ -85,7 +74,6 @@ const verifyOtp = async () => {
     });
   } finally {
     setVerifying(false);
-    console.log("⏹️ Verify OTP finished");
   }
 };
 
