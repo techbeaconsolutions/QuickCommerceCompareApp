@@ -13,11 +13,11 @@ import { Ionicons } from "@expo/vector-icons";
 export default function BestPriceBanner({
   bestPrice,
   colors,
-  onPress, // ✅ NEW
+  onPress,
 }: any) {
   if (!bestPrice) return null;
 
-  const PLATFORM_LOGO_URLS = {
+  const PLATFORM_LOGO_URLS: any = {
     Blinkit: "https://assets.grofer.io/app-icon/blinkit.png",
     Zepto: "https://cdn.zeptonow.com/app/zepto-logo.png",
     Swiggy: "https://cdn.swiggy.com/uploads/instamart_xhdpi_2.png",
@@ -25,7 +25,7 @@ export default function BestPriceBanner({
       "https://static-assets-web.flixcart.com/www/linchpin/fk-cp-zion/img/flipkart-plus_8d85f4.png",
   };
 
-  const PLATFORM_COLORS = {
+  const PLATFORM_COLORS: any = {
     Blinkit: "#F7D20A",
     Zepto: "#8E3FFC",
     Swiggy: "#FC8019",
@@ -45,80 +45,79 @@ export default function BestPriceBanner({
     PLATFORM_COLORS[bestPrice.platform] || "#333";
 
   return (
-    <LinearGradient
-      colors={["#0CC6E9", colors.primary]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.gradientWrapper}
+    <Pressable
+      onPress={onPress}
+      android_ripple={{ color: "rgba(255,255,255,0.15)" }}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.96 : 1,
+        transform: [{ scale: pressed ? 0.98 : 1 }],
+      })}
     >
-      <Pressable
-        onPress={onPress} // ✅ SAME AS HOME CARD
-        style={({ pressed }) => [
-          styles.card,
-          {
-            backgroundColor: colors.card,
-            opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.97 : 1 }],
-          },
-        ]}
+      <LinearGradient
+        colors={["#0CC6E9", colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientWrapper}
       >
-        {/* Product Image */}
-        {bestPrice.image && (
-          <Image
-            source={{ uri: normalizeImageUrl(bestPrice.image) }}
-            style={styles.productImage}
-          />
-        )}
-
-        {/* Product Title */}
-        <Text
-          style={[styles.productTitle, { color: colors.text }]}
-          numberOfLines={2}
-        >
-          {bestPrice.title || bestPrice.name}
-        </Text>
-
-        {/* Title Row */}
-        <View style={styles.titleRow}>
-          <Ionicons
-            name="pricetag-outline"
-            size={20}
-            color={colors.primary}
-          />
-          <Text
-            style={[styles.titleText, { color: colors.text }]}
-          >
-            Best Deal Found
-          </Text>
-        </View>
-
-        {/* Price + Platform */}
-        <View style={styles.priceRow}>
-          <Text
-            style={[styles.priceText, { color: colors.primary }]}
-          >
-            {bestPrice.price}
-          </Text>
-
-          {platformLogo && (
-            <View
-              style={[
-                styles.platformChip,
-                { backgroundColor: platformColor },
-              ]}
-            >
-              <Image
-                source={{ uri: platformLogo }}
-                style={styles.platformLogo}
-              />
-              <Text style={styles.platformChipText}>
-                {bestPrice.platform}
-              </Text>
-            </View>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          {/* Product Image */}
+          {bestPrice.image && (
+            <Image
+              source={{ uri: normalizeImageUrl(bestPrice.image) }}
+              style={styles.productImage}
+            />
           )}
+
+          {/* Product Title */}
+          <Text
+            style={[styles.productTitle, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {bestPrice.title || bestPrice.name}
+          </Text>
+
+          {/* Title Row */}
+          <View style={styles.titleRow}>
+            <Ionicons
+              name="pricetag-outline"
+              size={20}
+              color={colors.primary}
+            />
+            <Text
+              style={[styles.titleText, { color: colors.text }]}
+            >
+              Best Deal Found
+            </Text>
+          </View>
+
+          {/* Price + Platform */}
+          <View style={styles.priceRow}>
+            <Text
+              style={[styles.priceText, { color: colors.primary }]}
+            >
+              {bestPrice.price}
+            </Text>
+
+            {platformLogo && (
+              <View
+                style={[
+                  styles.platformChip,
+                  { backgroundColor: platformColor },
+                ]}
+              >
+                <Image
+                  source={{ uri: platformLogo }}
+                  style={styles.platformLogo}
+                />
+                <Text style={styles.platformChipText}>
+                  {bestPrice.platform}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </Pressable>
-    </LinearGradient>
+      </LinearGradient>
+    </Pressable>
   );
 }
 
